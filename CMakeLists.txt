@@ -20,6 +20,9 @@ find_package(GTest REQUIRED)
 include_directories(${GTEST_INCLUDE_DIR})
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
+add_executable( NGA readNGA.cpp )
+add_executable( Integration Acceleration.cpp )
+
 set( test_sources testTaylor.cpp )
 add_executable( Tests ${test_sources} )
 target_link_libraries( Tests gtest_main gtest )

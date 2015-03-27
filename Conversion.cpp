@@ -327,28 +327,8 @@ Vector3 convert( Time t, double x, double y, double z )
     r_crs.push_back( y );
     r_crs.push_back( z );
 
-//    print( r_crs, "Take vector" );
-    MatrixD P = precession( t );
-    MatrixD N = nutation( t );
-    MatrixD G = rotation( t );
-    MatrixD W = polar( t );
-
-    MatrixD M1, M2, M3;
-    M1 = multiply( N,P );
-    M2 = multiply( G,M1 );
-    M3 = multiply( W,M2 );
-    print( M3, "TERRESTIAL TO CELESTIAL");
-  
- //   MatrixD M = multiply( W, G );
-//    Vector3 r_trs = multiply( M, r_crs );
-
-    // r_TRS(t) = W(t) * G(t) * N(t) * P(t) * r_CRS
-    Vector3 out1 = multiply( P, r_crs );
-    Vector3 r_trs = multiply( N, out1 );
-   // Vector3 r_trs = multiply( G, out2 );
-    //Vector3 r_trs = multiply( W, r_crs );
-   // std::cout << "Result: " << std::endl;
-//    Vector3 r_trs = multiply( G, r_crs );
+    MatrixD M = conversionMatrix( t );
+    Vector3 r_trs = multiply( M, r_crs );
     return r_trs;
 }
 

@@ -11,6 +11,11 @@ typedef std::vector< std::vector< double > > MatrixD;
 typedef std::vector< std::vector< int > > MatrixI;
 typedef std::vector< double > Vector3;
 
+double kmuE = 398600.4418;
+double kRE = 6738;
+double kRE2 = kRE*kRE;
+double kJ2 = 0.00108263;
+
 MatrixD createMatrix( std::vector< double > v )
 {
     MatrixD M; 
