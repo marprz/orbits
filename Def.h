@@ -5,6 +5,8 @@
 #include <vector>
 #include <cmath>
 #include <iomanip>
+#include <iostream>
+#include <fstream>
 
 typedef std::array< std::array< double, 3 >, 3 > Matrix33;
 typedef std::vector< std::vector< double > > MatrixD;
@@ -15,6 +17,38 @@ double kmuE = 398600.4418;
 double kRE = 6738;
 double kRE2 = kRE*kRE;
 double kJ2 = 0.00108263;
+
+void saveVectorToFile( const std::vector< std::vector< Vector3 > >& positions, const std::string& outName )
+{
+    int satellites_nb = positions.size();
+    int positions_nb = positions.at(0).size();
+    std::cout << "satellites_nb = " << satellites_nb << ", positions_nb = " << positions_nb << std::endl;
+    std::fstream outFile;
+    outFile.open( outName.c_str(), std::ios::out | std::ios::in );
+    outFile << "function p = " << outName << "\n";
+    outFile << "p=zeros(" << satellites_nb << ", " << positions_nb << ", 3 );\n";
+    for( int i=0; i<satellites_nb; ++i )
+    {
+        int temp_pos_nb = positions.at(i).size();
+        if( temp_pos_nb > 0 )
+        {
+            std::cout << "i=" << i << ", temp_pos_nb=" << temp_pos_nb << std::endl;
+            outFile << "p(" << i+1 << ",:,:) = [ ";
+            for( int j=0; j<temp_pos_nb-1; ++j )
+            {
+                double x = ((positions.at(i)).at(j)).at(0);
+                double y = ((positions.at(i)).at(j)).at(1);
+                double z = ((positions.at(i)).at(j)).at(2);
+                outFile << x << " " << y << " " << z << ";\n";
+                std::cout << x << " " << y << " " << z << ";\n";
+             //   std::cout << "acceleration: " << norm(Acceleration( (positions.at(i)).at(j))) << std::endl;
+            }
+            outFile << ((positions.at(i)).at(temp_pos_nb-1)).at(0) << " " << ((positions.at(i)).at(temp_pos_nb-1)).at(1) << " " << ((positions.at(i)).at(temp_pos_nb-1)).at(2) << "];\n";
+        }
+    }
+    outFile.close();
+}
+
 
 MatrixD createMatrix( std::vector< double > v )
 {
@@ -38,8 +72,33 @@ MatrixD createMatrix( std::vector< double > v )
     return M;
 }
 
-void print( MatrixD, std::string );
+Vector3 operator*( double d, Vector3 v )
+{
+    for( int i=0; i<v.size(); ++i )
+        v.at(i) *= d;
+    return v;
+}
 
+Vector3 operator+( double d, Vector3 v )
+{
+    for( int i=0; i<v.size(); ++i )
+        v.at(i) += d;
+    return v;
+}
+
+Vector3 operator+( const Vector3& v1, const Vector3& v2 )
+{
+    int m = v1.size() < v2.size() ? v1.size() : v2.size();
+    Vector3 ret = v1.size() > v2.size() ? v1 : v2;
+
+    for( int i=0; i<m; ++i )
+        ret.at(i) = v1.at(i) + v2.at(i);
+
+    return ret;
+}
+
+void print( MatrixD, std::string );
+/*
 MatrixD InverseMatrix( const MatrixD& M )
 {
     double a = M.at(0).at(0);
@@ -74,7 +133,7 @@ MatrixD InverseMatrix( const MatrixD& M )
 
     MatrixD inverse = { v1, v2, v3 };
     return inverse;
-}
+}*/
 
 void Transpose( MatrixD& M )
 {
@@ -503,6 +562,110 @@ std::vector< double > LatLonToXYZ( std::vector< double > RLatLon )
     ret.push_back( z );
     return ret;
 };
+
+void HairerParameters( Vector3& ALPHA, std::vector< Vector3 >& A, Vector3& AL )
+{
+    ALPHA.resize(11);
+    ALPHA.at(0) = 0;
+    ALPHA.at(1) = 8.48093651182655889791*0.01;
+    ALPHA.at(2) = 1.69618730236531177958*0.1;
+    ALPHA.at(3) = 8.82527661964732346426*0.1;
+    ALPHA.at(4) = 3.57384241759677451843*0.1;
+    ALPHA.at(5) = 1.17472338035267653574*0.1;
+    ALPHA.at(6) = 6.42615758240322548157*0.1;
+    ALPHA.at(7) = ALPHA.at(3);
+    ALPHA.at(8) = ALPHA.at(2);
+    ALPHA.at(9) = 0;
+    ALPHA.at(10) = 1;
+
+    A.resize(12);
+    for( int i=0; i<12; ++i )
+    {
+        A.at(i).resize(11);
+        for( int j=0; j<11; ++j )
+            A.at(i).at(j) = 0;
+    }
+    
+    A.at(1).at(0)  = 3.59631420588164200966*0.001;
+    A.at(2).at(0)  = 4.79508560784218934622*0.001;
+    A.at(2).at(1)  = 9.59017121568437869244*0.001;
+    A.at(3).at(0)  = 1.87733546050627049772;
+    A.at(3).at(1)  =-4.32661231970111510045;
+    A.at(3).at(2)  = 2.83870439626131304487;
+    A.at(4).at(0)  = 1.94709467473823596644*0.01;
+    A.at(4).at(1)  = 0;
+    A.at(4).at(2)  = 4.42810873502123510231*0.01;
+    A.at(4).at(3)  = 1.09714031475079632769*0.0001;
+    A.at(5).at(0)  = 4.64206697543819328333*0.001;
+    A.at(5).at(1)  = 0;
+    A.at(5).at(2)  = 2.93579155497804175774*0.001;
+    A.at(5).at(3)  = 2.76435808114904080285*0.00001;
+    A.at(5).at(4)  =-7.05627009491629727298*0.0001;
+    A.at(6).at(0)  =-6.96029489417689828096*0.001;
+    A.at(6).at(1)  = 0;
+    A.at(6).at(2)  =-1.90054512658393594723*0.1;
+    A.at(6).at(3)  = 7.68088148461498565180*0.1;
+    A.at(6).at(4)  = 1.18704223034434343286*0.1;
+    A.at(6).at(5)  = 2.84020002739066989630*0.1;
+    A.at(7).at(0)  = 8.26380420350248571364*0.01;
+    A.at(7).at(1)  = 0;
+    A.at(7).at(2)  = 3.60887996724131292687*0.1;
+    A.at(7).at(3)  = 1.01208078941331907108*0.001;
+    A.at(7).at(4)  = 6.79462118331253280025*0.01;
+    A.at(7).at(5)  =-2.04227957300564960765*0.1;
+    A.at(7).at(6)  = 8.11711629853386060148*0.01;
+    A.at(8).at(0)  = 2.38468700370378669757*0.01;
+    A.at(8).at(1)  = 9.59017121568437869244*0.001;
+    A.at(8).at(2)  = 1.52655867995367678583*0.1;
+    A.at(8).at(3)  =-5.41908820084510828926*0.001;
+    A.at(8).at(4)  =-3.93767256187270659404*0.01;
+    A.at(8).at(5)  =-1.40338104799298795297*0.1; 
+    A.at(8).at(6)  = 1.00094410252962054139*0.01;
+    A.at(8).at(7)  = 3.41682516901140790025*0.001;
+    A.at(9).at(0) =-4.25990467506340701948*0.01;
+    A.at(9).at(1) = 0;
+    A.at(9).at(2) =-5.93485416695720137147*0.1;
+    A.at(9).at(3) = 9.81481906263695126914*0.001;
+    A.at(9).at(4) = 7.13421080958931560696*0.01;
+    A.at(9).at(5) = 2.91368066505515770072*0.1;
+    A.at(9).at(6) =-1.57502473657776550315*0.01;
+    A.at(9).at(7) =-6.97794897116397988241*0.001;
+    A.at(9).at(8) = 2.86287666119249964845*0.1;
+    A.at(10).at(0) =-6.14180937931931543943*0.1;
+    A.at(10).at(1) = 0;
+    A.at(10).at(2) =-1.75100055986614758156;
+    A.at(10).at(3) =-6.76603738760857112582*0.001;
+    A.at(10).at(4) = 3.95581030796451903257*0.1;
+    A.at(10).at(5) = 1.13603914070927980965;
+    A.at(10).at(6) = 5.64165276602374526099*0.01;
+    A.at(10).at(7) = 3.58989223779823259146*0.01;
+    A.at(10).at(8) = 7.48011913641736205396*0.1;
+    A.at(10).at(9)= 5*0.1;
+    A.at(11).at(0) = 0;
+    A.at(11).at(1) = 0;
+    A.at(11).at(2) =-8.30381269763468822042*0.01;
+    A.at(11).at(3) = 0;
+    A.at(11).at(4) = 1.78280368337326917339*0.1;
+    A.at(11).at(5) = 1.67007309146871573764*0.1;
+    A.at(11).at(6) = 9.91488201804162591694*0.01;
+    A.at(11).at(7) = 2.22301690020519163947*0.01;
+    A.at(11).at(8) = 8.30381269763468822042*0.01;
+    A.at(11).at(9)= 3.33333333333333333333*0.01;
+    A.at(11).at(10)= 0;
+    
+    AL.resize(11);
+    AL.at(0) = 0;
+    AL.at(1) = 0;
+    AL.at(2) =-1*0.1;
+    AL.at(3) = 0;
+    AL.at(4) = 2.77429188517743176508*0.1;
+    AL.at(5) = 1.89237478148923490158*0.1;
+    AL.at(6) = 2.77429188517743176508*0.1;
+    AL.at(7) = 1.89237478148923490158*0.1;
+    AL.at(8) = 1*0.1;
+    AL.at(9)= 3.33333333333333333333*0.01;
+    AL.at(10)= 3.33333333333333333333*0.01;
+}
 
 // GNSS data processing - p.181
 void nutationParameters( MatrixI& k, MatrixD& A, MatrixD& B )

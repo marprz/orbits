@@ -21,7 +21,7 @@ include_directories(${GTEST_INCLUDE_DIR})
 include_directories(${gtest_SOURCE_DIR}/include ${gtest_SOURCE_DIR})
 
 add_executable( NGA readNGA.cpp )
-add_executable( Integration Acceleration.cpp )
+add_executable( Integration Simulation.cpp )
 
 set( test_sources testTaylor.cpp )
 add_executable( Tests ${test_sources} )

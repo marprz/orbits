@@ -1,7 +1,11 @@
+#ifndef ACCELERATION_H
+#define ACCELERATION_H
+
 #include <iostream>
 
 #include "Def.h"
 
+// ~0.00056 km/s
 Vector3 Acceleration( const Vector3& position )
 {
     Vector3 acc = { 0, 0, 0 };
@@ -19,11 +23,4 @@ Vector3 Acceleration( const Vector3& position )
     }
     return acc;
 }
-
-int main()
-{
-    Vector3 p1 = { -4918.41, -14599, 21607.8 };
-    Vector3 a1 = Acceleration( p1 );
-    std::cout << "magnitude of acceleration: " << norm( a1 ) << std::endl;
-    return 0;
-}
+#endif
