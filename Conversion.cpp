@@ -320,7 +320,7 @@ MatrixD conversionMatrix( Time t )
     return transformMatrix;
 }
 
-Vector3 convert( Time t, double x, double y, double z )
+Vector convert( Time t, double x, double y, double z )
 {
     std::vector< double > r_crs;
     r_crs.push_back( x );
@@ -328,11 +328,11 @@ Vector3 convert( Time t, double x, double y, double z )
     r_crs.push_back( z );
 
     MatrixD M = conversionMatrix( t );
-    Vector3 r_trs = multiply( M, r_crs );
+    Vector r_trs = multiply( M, r_crs );
     return r_trs;
 }
 
-Vector3 convert( Time t, Vector3 v )
+Vector convert( Time t, Vector v )
 {
     return convert( t, v.at(0), v.at(1), v.at(2) );
 }
@@ -343,7 +343,7 @@ int main()
     Time t1( 2013, 12, 10, 0, 0, 0 );
     Time t2( 2013, 12, 10, 0, 5, 0 );
 
-    std::vector< Vector3 > pos;
+    std::vector< Vector > pos;
     std::string filename("sat1.txt");
     std::string fileOut("out2.m");
     std::fstream input;
@@ -367,7 +367,7 @@ int main()
         input >> x >> y >> z >> str;
         std::cout << "Coordinates: " << x << ", " << y << ", " << z << std::endl;
         Time t( Y, M, D, H, Mi, S );
-        Vector3 v = convert( t, x, y, z, fmod(H,12)+Mi/60 );
+        Vector v = convert( t, x, y, z, fmod(H,12)+Mi/60 );
         pos.push_back( v );
         if( Mi < 55 )
         {

@@ -14,7 +14,7 @@ int main( int argc, char* argv[] )
         out_file_name = argv[1];
 
     std::cout << "file: " << out_file_name << std::endl;
-    std::vector< std::vector< Vector3 > > transformed_positions;
+    std::vector< std::vector< Vector > > transformed_positions;
     transformed_positions.resize( 32 );
 
     std::fstream file;
@@ -36,7 +36,7 @@ int main( int argc, char* argv[] )
     //            std::cout << type << " " << id << " " << x << " " << y << " " << z << std::endl;
                 if( type == std::string("P") )
                 {
-                    Vector3 pos = convert( t, x, y, z );
+                    Vector pos = convert( t, x, y, z );
                     (transformed_positions.at(id-1)).push_back( pos );
                 }
             }

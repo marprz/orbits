@@ -150,7 +150,7 @@ TEST( TestDef, multiplicationVectorTest1 )
     std::vector< double > v1 = { 1, 2, 3, 4, 5, 6, 7, 8, 9 };
     std::vector< double > v2 = { 2, 3, 4 };
     MatrixD mIn1 = createMatrix( v1 );
-    Vector3 vOut = multiply( mIn1, v2 );
+    Vector vOut = multiply( mIn1, v2 );
     ASSERT_EQ( vOut.at(0), 20 );
     ASSERT_EQ( vOut.at(1), 47 );
     ASSERT_EQ( vOut.at(2), 74 );
@@ -198,19 +198,19 @@ TEST( TestDef, LatLonToXYZTest )
     std::vector< double > latlon1 = { 26500000, 0, 0 };
     std::vector< double > outXYZ1 = LatLonToXYZ( latlon1 );
     std::vector< double > expXYZ1 = { 26500000, 0, 0};
-    Vector3 v1 = outXYZ1-expXYZ1;
+    Vector v1 = outXYZ1-expXYZ1;
     ASSERT_LE( norm(v1), eps );
 
     std::vector< double > latlon2 = { 26500000, 90, 0 };
     std::vector< double > outXYZ2 = LatLonToXYZ( latlon2 );
     std::vector< double > expXYZ2 = { 0, 0, 26500000};;
-    Vector3 v2 = outXYZ2-expXYZ2;
+    Vector v2 = outXYZ2-expXYZ2;
     ASSERT_LE( norm(v2), eps );
 
     std::vector< double > latlon3 = { 26500000, 0, 180 };
     std::vector< double > outXYZ3 = LatLonToXYZ( latlon3 );
     std::vector< double > expXYZ3 = { -26500000, 0, 0};
-    Vector3 v3 = outXYZ3-expXYZ3;
+    Vector v3 = outXYZ3-expXYZ3;
     ASSERT_LE( norm(v3), eps );
 
 }

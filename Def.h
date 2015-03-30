@@ -1,6 +1,7 @@
 #ifndef DEF_H
 #define DEF_H
 
+#include <list>
 #include <array>
 #include <vector>
 #include <cmath>
@@ -11,14 +12,14 @@
 typedef std::array< std::array< double, 3 >, 3 > Matrix33;
 typedef std::vector< std::vector< double > > MatrixD;
 typedef std::vector< std::vector< int > > MatrixI;
-typedef std::vector< double > Vector3;
+typedef std::vector< double > Vector;
 
 double kmuE = 398600.4418;
 double kRE = 6738;
 double kRE2 = kRE*kRE;
 double kJ2 = 0.00108263;
 
-void saveVectorToFile( const std::vector< std::vector< Vector3 > >& positions, const std::string& outName )
+void saveVectorToFile( const std::vector< std::vector< Vector > >& positions, const std::string& outName )
 {
     int satellites_nb = positions.size();
     int positions_nb = positions.at(0).size();
@@ -53,15 +54,15 @@ void saveVectorToFile( const std::vector< std::vector< Vector3 > >& positions, c
 MatrixD createMatrix( std::vector< double > v )
 {
     MatrixD M; 
-    Vector3 v1;
+    Vector v1;
     v1.push_back( v.at(0) );
     v1.push_back( v.at(1) );
     v1.push_back( v.at(2) );
-    Vector3 v2;
+    Vector v2;
     v2.push_back( v.at(3) );
     v2.push_back( v.at(4) );
     v2.push_back( v.at(5) );
-    Vector3 v3;
+    Vector v3;
     v3.push_back( v.at(6) );
     v3.push_back( v.at(7) );
     v3.push_back( v.at(8) );
@@ -72,24 +73,72 @@ MatrixD createMatrix( std::vector< double > v )
     return M;
 }
 
-Vector3 operator*( double d, Vector3 v )
+Vector operator*( double d, Vector v )
 {
     for( int i=0; i<v.size(); ++i )
         v.at(i) *= d;
     return v;
 }
 
-Vector3 operator+( double d, Vector3 v )
+Vector operator-( Vector v1, Vector v2 )
+{
+    if( v1.size() != v2.size() )
+        std::cout << "ERROR!Vector operator-( Vector v1, Vector v2 ) " << std::endl;
+    for( int i=0; i<v1.size(); ++i )
+        v1.at(i) -= v2.at(i);
+    return v1;
+}
+
+std::vector< Vector > operator-( std::vector< Vector > v )
+{
+    std::vector< Vector >::iterator it;
+    for( it = v.begin(); it != v.end(); ++it )
+        (*it ) = (-1)*(*it);
+    return v;
+}
+
+Vector operator-( Vector v )
+{
+    return (-1)*v;
+}
+
+std::vector< Vector > operator-( std::vector< Vector > v1, const std::vector< Vector >& v2 )
+{
+    if( v1.size() != v2.size() )
+        std::cout << "ERROR! Cannot calculate vector< Vector >-vector< Vector > => different sizes!" << std::endl;
+    for( int i=0; i<v1.size(); ++i )
+        v1.at(i) = v1.at(i)-v2.at(i);
+    return v1;
+}
+
+Vector operator/( Vector v, double d )
+{
+    for( int i=0; i<v.size(); ++i )
+        v.at(i) /= d;
+    return v;
+}
+double operator*( Vector v1, Vector v2 )
+{
+    double sum = 0;
+    if( v1.size() != v2.size() )
+        std::cout << "ERROR! PROBLEM WITH MULTIPLICATION OF VECTORS -> DIFFERENT SIZES!" << std::endl;
+    else
+    for( int i=0; i<v1.size(); ++i )
+        sum += v1.at(i)*v2.at(i);
+    return sum;
+}
+
+Vector operator+( double d, Vector v )
 {
     for( int i=0; i<v.size(); ++i )
         v.at(i) += d;
     return v;
 }
 
-Vector3 operator+( const Vector3& v1, const Vector3& v2 )
+Vector operator+( const Vector& v1, const Vector& v2 )
 {
     int m = v1.size() < v2.size() ? v1.size() : v2.size();
-    Vector3 ret = v1.size() > v2.size() ? v1 : v2;
+    Vector ret = v1.size() > v2.size() ? v1 : v2;
 
     for( int i=0; i<m; ++i )
         ret.at(i) = v1.at(i) + v2.at(i);
@@ -127,9 +176,9 @@ MatrixD InverseMatrix( const MatrixD& M )
         std::cout << "ERROR: INVERSE MATRIX DOES NOT EXIST" << std::endl;
 
     std::cout << "det = " << detM << std::endl;
-    Vector3 v1 = { A/detM, D/detM, G/detM };
-    Vector3 v2 = { B/detM, E/detM, H/detM };
-    Vector3 v3 = { C/detM, F/detM, I/detM };
+    Vector v1 = { A/detM, D/detM, G/detM };
+    Vector v2 = { B/detM, E/detM, H/detM };
+    Vector v3 = { C/detM, F/detM, I/detM };
 
     MatrixD inverse = { v1, v2, v3 };
     return inverse;
@@ -148,14 +197,40 @@ void Transpose( MatrixD& M )
     }
 }
 
-void print( Vector3 V, std::string name = "Vector" )
+void print( Vector V, std::string name = "Vector" )
 {
-    std::cout << std::endl << name << ": ";
+    if( name != "" )
+    {
+        std::cout << std::endl << name << ": ";
+    }
 //    double r = sqrt( pow(V.at(0),2) + pow(V.at(1),2) + pow(V.at(2),2) );
     for( int i=0; i<V.size(); ++i )
+    {
+        std::cout.width( 10 );
         std::cout << V.at(i) << " ";
+    }
     std::cout << std::endl;
 }
+
+
+void print( std::vector< Vector > v, std::string name = "Vector" )
+{
+    std::cout << name << ": " << std::endl;
+    std::vector< Vector >::iterator it;
+    for( it = v.begin(); it != v.end(); ++it )
+        print( *it, "" );
+    std::cout << std::endl;
+}
+
+void print( std::list< Vector > v, std::string name = "Vector" )
+{
+    std::cout << name << ": " << std::endl;
+    std::list< Vector >::iterator it;
+    for( it = v.begin(); it != v.end(); ++it )
+        print( *it, "" );
+    std::cout << std::endl;
+}
+
 
 double degreeToRad( double deg )
 {
@@ -190,6 +265,7 @@ double arcsecToDegMod30( double s )
     return deg;
 }
 
+/*
 // TODO przerobic drukowanie na template
 void print( MatrixD M, std::string name = "Matrix" )
 {
@@ -197,7 +273,7 @@ void print( MatrixD M, std::string name = "Matrix" )
     std::cout << M.at(0).at(0) << " " << M.at(0).at(1) << " " << M.at(0).at(2) << std::endl;
     std::cout << M.at(1).at(0) << " " << M.at(1).at(1) << " " << M.at(1).at(2) << std::endl;
     std::cout << M.at(2).at(0) << " " << M.at(2).at(1) << " " << M.at(2).at(2) << std::endl;
-}
+}*/
 
 void print( Matrix33 M, std::string name = "Matrix" )
 {
@@ -212,17 +288,17 @@ MatrixD R1( double m )
 {
     MatrixD R;
 
-    Vector3 v1;
+    Vector v1;
     v1.push_back( 1 );
     v1.push_back( 0 );
     v1.push_back( 0 );
    
-    Vector3 v2;
+    Vector v2;
     v2.push_back( 0 );
     v2.push_back( cos(m) );
     v2.push_back( sin(m) );
 
-    Vector3 v3;
+    Vector v3;
     v3.push_back( 0 );
     v3.push_back( -sin(m) );
     v3.push_back( cos(m) );
@@ -241,17 +317,17 @@ MatrixD R2( double m )
 {
     MatrixD R;
 
-    Vector3 v1;
+    Vector v1;
     v1.push_back( cos(m) );
     v1.push_back( 0 );
     v1.push_back( -sin(m) );
    
-    Vector3 v2;
+    Vector v2;
     v2.push_back( 0 );
     v2.push_back( 1 );
     v2.push_back( 0 );
 
-    Vector3 v3;
+    Vector v3;
     v3.push_back( sin(m) );
     v3.push_back( 0 );
     v3.push_back( cos(m) );
@@ -267,17 +343,17 @@ MatrixD R3( double m )
 {
     MatrixD R;
 
-    Vector3 v1;
+    Vector v1;
     v1.push_back( cos(m) );
     v1.push_back( sin(m) );
     v1.push_back( 0 );
    
-    Vector3 v2;
+    Vector v2;
     v2.push_back( -sin(m) );
     v2.push_back( cos(m) );
     v2.push_back( 0 );
 
-    Vector3 v3;
+    Vector v3;
     v3.push_back( 0 );
     v3.push_back( 0 );
     v3.push_back( 1 );
@@ -318,7 +394,7 @@ MatrixD multiply( MatrixD M, MatrixD N )
     MatrixD ret;
     for( int i=0; i<3; ++i )
     {
-        Vector3 v;
+        Vector v;
         for( int j=0; j<3; ++j )
         {
             double s = 0;
@@ -331,9 +407,9 @@ MatrixD multiply( MatrixD M, MatrixD N )
     return ret;
 }
 
-Vector3 multiply( MatrixD M, Vector3 v )
+Vector multiply( MatrixD M, Vector v )
 {
-    Vector3 ret;
+    Vector ret;
     for( int i=0; i<3; ++i )
     {
         double s = 0;
@@ -527,15 +603,16 @@ void inverseJulian( double jd )
     std::cout << "inverse Julian: " << Y << "." << M << "." << D << ", H:" << H << std::endl;
 }
 
-Vector3 operator- ( const Vector3& v1, const Vector3& v2 )
+/*
+Vector operator- ( const Vector& v1, const Vector& v2 )
 {
-    Vector3 ret;
+    Vector ret;
     for( int i=0; i<3; ++i )
         ret.push_back( v1.at(i)-v2.at(i) );
     return ret;
-}
+}*/
 
-double norm( const Vector3& v )
+double norm( const Vector& v )
 {
     double ret = 0;
     for( int i=0; i<v.size(); ++i )
@@ -563,7 +640,7 @@ std::vector< double > LatLonToXYZ( std::vector< double > RLatLon )
     return ret;
 };
 
-void HairerParameters( Vector3& ALPHA, std::vector< Vector3 >& A, Vector3& AL )
+void HairerParameters( Vector& ALPHA, std::vector< Vector >& A, Vector& AL )
 {
     ALPHA.resize(11);
     ALPHA.at(0) = 0;
@@ -1001,5 +1078,31 @@ void nutationParameters( MatrixI& k, MatrixD& A, MatrixD& B )
         }
     }*/
 }
+
+void GaussJacksonCoefficients( MatrixD& a, MatrixD& b )
+{
+    b = { { 19087/89600, -427487/725760, 3498217/3628800, -500327/403200, 6467/5670, -2616161/3628800, 24019/80640, -263077/3628800, 8183/1036800 },
+        {8183/1036800, 57251/403200, -1106377/3628800, 218483/725760, -69/280, 530177/3628800, -210359/3628800, 5533/403200, -425/290304},
+        {-425/290304, 76453/3628800, 5143/57600, -660127/3628800, 661/5670, -4997/80640, 83927/3628800, -19109/3628800, 7/12800},
+        {7/12800, -23173/3628800, 29579/725760, 2497/57600, -2563/22680, 172993/3628800, -6463/403200, 2497/725760, -2497/7257600},
+        {-2497/7257600, 1469/403200, -68119/3628800, 252769/3628800, 0, -252769/3628800, 68119/3628800, -1469/403200, 2497/7257600},
+        {2497/7257600, -2497/725760, 6463/403200, -172993/3628800, 2563/22680, -2497/57600, -29579/725760, 23173/3628800, -7/12800},
+        {-7/12800, 19109/3628800, -83927/3628800, 4997/80640, -661/5670, 660127/3628800, -5143/57600, -76453/3628800, 425/290304},
+        {425/290304, -5533/403200, 210359/3628800, -530177/3628800, 69/280, -218483/725760, 1106377/3628800, -57251/403200, -8183/1036800},
+        {-8183/1036800, 263077/3628800, -24019/80640, 261616/3628800, -6467/5670, 500327/403200, -3498217/3628800, 427487/725760, -19087/89600},
+        {25713/89600, -9401029/3628800, 5393233/518400, -9839609/403200, 167287/4536, -135352319/3628800, 10219841/403200, -40987771/3628800, 3288521/1036800 }};
+
+    a = { { 3250433/53222400, 572741/5702400, -8701681/39916800, 4026311/13305600, -917039/3193344, 7370669/39916800, -1025779/13305600, 754331/39916800, -330157/159667200},
+        {-330157/159667200, 530113/6652800, 518887/19958400, -27631/623700, 44773/1064448, -531521/19958400, 109343/9979200, -1261/475200, 45911/159667200},
+        {45911/159667200, -185839/39916800, 171137/1900800, 73643/39916800, -25775/3193344, 77597/13305600, -98911/39916800, 24173/39916800, -3499/53222400},
+        {-3499/53222400, 4387/4989600, -35039/4989600, 90817/950400, -20561/3193344, 2117/9979200, 2059/6652800, -317/2851200, 317/22809600},
+        {317/22809600, -2539/13305600, 55067/39916800, -326911/39916800, 14797/152064, -326911/39916800, 55067/39916800, -2539/13305600, 317/22809600},
+        {317/22809600, -317/2851200, 2059/6652800, 2117/9979200, -20561/3193344, 90817/950400, -35039/4989600, 4387/4989600, -3499/53222400},
+        {-3499/53222400, 24173/39916800, -98911/39916800, 77597/13305600, -25775/3193344, 73643/39916800, 171137/1900800, -185839/39916800, 45911/159667200},
+        {45911/159667200, -1261/475200, 109343/9979200, -531521/19958400, 44773/1064448, -27631/623700, 518887/19958400, 530113/6652800, -330157/159667200},
+        {-330157/159667200, 754331/39916800, -1025779/13305600, 7370669/39916800, -917039/3193344, 4026311/13305600, -8701681/39916800, 572741/5702400, 3250433/53222400},
+        {3250433/53222400, -11011481/19958400, 6322573/2851200, -8660609/1663200, 25162927/3193344, -159314453/19958400, 18071351/3326400, -24115843/9979200, 103798439/159667200 }};
+}
+
 
 #endif // DEF_H
