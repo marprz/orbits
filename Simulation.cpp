@@ -1,4 +1,6 @@
-#include <list>
+#include <list> // moze niepotrzebne
+#include <deque>
+#include <iomanip>
 #include "Integration.h"
 #include "Acceleration.h"
 #include "Conversion.cpp"
@@ -54,18 +56,17 @@ Vector Calcs0( const Vector& v0, const MatrixD& b, const std::vector< Vector >& 
 }
 
 // equation 86
-Vector CalcS0( const Vector& v0, const MatrixD& a, const std::vector< Vector >&as, const double& h )
+Vector CalcS0( const Vector& r0, const MatrixD& a, const std::vector< Vector >&as, const double& h )
 {
     Vector ret;
     Vector sum = { 0, 0, 0 };
     for( int i=0; i<as.size(); ++i )
         sum = sum + a.at(4).at(i)*as.at(i);
-    ret = v0/pow(h,2)-sum;
-    print( ret, "s0" );
+    ret = r0/pow(h,2)-sum;
     return ret; 
 }
 // equation 75
-void Calcsn( std::list< Vector >& s, const std::vector< Vector >& a, const int& index )
+void Calcsn( std::deque< Vector >& s, const std::vector< Vector >& a, const int& index )
 {
     if( index == 0 )
         std::cout << "ERROR! Calcsn - index should not be 0! " << std::endl;
@@ -83,8 +84,9 @@ void Calcsn( std::list< Vector >& s, const std::vector< Vector >& a, const int& 
 }
 
 // equation 86
-void CalcSn( const std::vector< Vector >& s, std::list< Vector >& S, const std::vector< Vector >& a, const int& index )
+void CalcSn( const std::deque< Vector >& s, std::deque< Vector >& S, const std::vector< Vector >& a, const int& index )
 {
+    std::cout << "function CalcSn: index = " << index  << std::endl;
     if( index == 0 )
         std::cout << "ERROR! CalcSn - index should not be 0! " << std::endl;
     if( index < 0 )
@@ -95,8 +97,11 @@ void CalcSn( const std::vector< Vector >& s, std::list< Vector >& S, const std::
     } 
     else
     {
+        std::cout << "s.size() = " << s.size() << ", a.size() = " << a.size() << std::endl;
         Vector Sn = S.back() + s.at(index+4) + a.at(index+4)/2;
+        std::cout << "new Sn calculated" << std::endl;
         S.push_back( Sn );
+        print( S.back(), "new calculated last Sn ");
     }
 }
 
@@ -104,7 +109,7 @@ void CalcSn( const std::vector< Vector >& s, std::list< Vector >& S, const std::
 std::vector< Vector > CalcSumb( const MatrixD& b, std::vector< Vector > as )
 {
     std::vector< Vector > ret;
-    for( int i=0; i<9; ++i ) // n=-4,...,4
+    for( int i=0; i<10; ++i ) // n=-4,...,4
     {
         Vector sum = { 0, 0, 0 };
         for( int k=0; k<9; ++k )
@@ -129,23 +134,45 @@ std::vector< Vector > CalcSuma( const MatrixD& a, std::vector< Vector > as )
         }
         ret.push_back( sum );
     }
+/*    std::cout << "CalcSuma: " << std::endl;
+    for( int i=0; i<ret.size(); ++i )
+        print( ret.at(i), "ret.at(i)" );
+    std::cout << std::endl;*/
     return ret;
 }
 
+// PREDICT - step 5.
+Vector Calcb5( const MatrixD& b, std::vector< Vector > as )
+{
+    Vector ret = { 0, 0, 0 };
+    int as_size = as.size(); 
+    for( int i=0; i<b.at(9).size(); ++i )
+        ret = ret + b.at(9).at(9-i-1)*as.at(as_size-i-1);
+    return ret;
+}
 
+// PREDICT - step 6.
+Vector Calca5( const MatrixD& a, std::vector< Vector > as )
+{
+    Vector ret = { 0, 0, 0}; 
+    int as_size = as.size(); 
+    for( int i=0; i<a.at(9).size(); ++i )
+        ret = ret + a.at(9).at(9-i-1)*as.at(as_size-i-1) ;
+    return ret;
+}
 
 void SimulationFromZeroGaussJackson()
 {    int n = 9;
     double h = 60; // step size in seconds
+    h = 5*h; // step is 5 min
     InitialVectors init = InitializeVectorsGJ( n, h );
     std::vector< Vector > rs = init.at(0);
     std::vector< Vector > vs = init.at(1);
     std::vector< Vector > as = init.at(2);
 
-    std::cout << "startup - r, v, a sizes: " << rs.size() << " " << vs.size() << " " << as.size() << std::endl;
     print( rs, "two-body positions");
-    print( vs, "two-body velocities");
-    print( as, "two-body accelerations");
+    /*print( vs, "two-body velocities");
+    print( as, "two-body accelerations");*/
     std::vector< Vector >::iterator it;
     std::cout << "positions: ";
     for( it = rs.begin(); it != rs.end(); ++it )
@@ -163,80 +190,177 @@ void SimulationFromZeroGaussJackson()
     MatrixD a, b;
     GaussJacksonCoefficients( a, b );
 
+    std::deque< Vector > sn, Sn; // TODO powinna byc lepsza struktura, zamiast tworzenia nowego wektora z listy
+
     bool is_acceleration_converged = false;
-    while( !is_acceleration_converged )
+    int counter = 0; 
+    int pointNb = 200; 
+    while( pointNb > 0 )
     {
-        std::list< Vector > snList, SnList;
-        std::vector< Vector > sum_bn, sum_an;
-
-        // sn:
-        Vector s0 = Calcs0( vs.at(4), b, as, h ); //Calcs0( Vector v0, MatrixD b, std::vector< Vector > as, double h )
-        snList.push_back( s0 );
-        for( int i=1; i<5; ++i )
+        --pointNb;
+        while( !is_acceleration_converged )
         {
-            //Calcsn( std::list< Vector >& s, const std::vector< Vector >& a, const int& index )
-            Calcsn( snList, as, -i ); 
-            Calcsn( snList, as, i ); 
-        }
+            std::vector< Vector > sum_bn, sum_an;
 
-        std::vector< Vector > sn, Sn; // TODO powinna byc lepsza struktura, zamiast tworzenia nowego wektora z listy
-        for( int j=0; j<9; ++j )
-        {
-            sn.push_back( snList.front() );
-            snList.pop_front();
-        }
-
-        // Sn:
-        Vector S0 = CalcS0( vs.at(4), a, as, h ); //Calcs0( Vector v0, MatrixD b, std::vector< Vector > as, double h )
-        SnList.push_back( S0 );
-        for( int i=1; i<5; ++i )
-        {
-            CalcSn( sn, SnList, as, -i ); // CalcSn( const std::vector< Vector >& s, std::list< Vector >& S, const std::vector< Vector >& a, const int& index )
-            CalcSn( sn, SnList, as, i ); 
-        }
-        
-        for( int j=0; j<9; ++j )
-        {
-            Sn.push_back( SnList.front() );
-            SnList.pop_front();
-
-        }
-        print( sn, "sn" );
-        print( Sn, "Sn" );
-
-        // step 3b  iii.
-        sum_bn = CalcSumb( b, as ); 
-        sum_an = CalcSuma( a, as );
-
-        // step 3b iv 
-        std::vector< Vector > corrected_vs; // eq. 74
-        std::vector< Vector > corrected_rs; // eq. 87
-        for( int i=0; i<9; ++i )
-        {   
-            if( i == 4 )
+            // sn:
+            Vector s0 = Calcs0( vs.at(4), b, as, h ); //Calcs0( Vector v0, MatrixD b, std::vector< Vector > as, double h )
+            sn.push_back( s0 );
+            for( int i=1; i<5; ++i )
             {
-                corrected_vs.push_back( vs.at(4) );
-                corrected_rs.push_back( rs.at(4) );
+                Calcsn( sn, as, -i ); 
+                Calcsn( sn, as, i ); 
             }
-            else 
+
+            // Sn:
+            Vector S0 = CalcS0( rs.at(4), a, as, h ); //Calcs0( Vector v0, MatrixD b, std::vector< Vector > as, double h )
+            Sn.push_back( S0 );
+            for( int i=1; i<5; ++i )
             {
-                corrected_vs.push_back( h*(sn.at(i)+sum_bn.at(i)) );
-                corrected_rs.push_back( h*h*(Sn.at(i)+sum_an.at(i)) );
+                CalcSn( sn, Sn, as, -i ); // CalcSn( const std::vector< Vector >& s, std::list< Vector >& S, const std::vector< Vector >& a, const int& index )
+                CalcSn( sn, Sn, as, i ); 
             }
+
+            // step 3b  iii.
+            sum_bn = CalcSumb( b, as ); 
+            sum_an = CalcSuma( a, as );
+
+            // step 3b iv 
+            std::vector< Vector > corrected_vs; // eq. 74
+            std::vector< Vector > corrected_rs; // eq. 87
+            std::vector< Vector > updated_as; 
+            for( int i=0; i<9; ++i )
+            {   
+                if( i == 4 )
+                {
+                    corrected_vs.push_back( vs.at(4) );
+                    corrected_rs.push_back( rs.at(4) );
+                }
+                else 
+                {
+                    corrected_vs.push_back( h*(sn.at(i)+sum_bn.at(i)) );
+                    corrected_rs.push_back( h*h*(Sn.at(i)+sum_an.at(i)) );
+                }
+                updated_as.push_back( Acceleration( corrected_rs.back() ) );
+            }
+
+            std::cout << std::setprecision( 5 );
+    /*        print( rs, "two-body positions");
+            print( corrected_rs, "corrected_rs" );
+            print( vs, "two-body velocities");
+            print( corrected_vs, "corrected_vs" );
+            print( as, "two-body accelerations");
+            print( updated_as, "updated_as" );
+            std::cout << "positions: ";
+            for( it = corrected_rs.begin(); it != corrected_rs.end(); ++it )
+                std::cout << norm(*it) << " ";
+            std::cout << std::endl;
+            std::cout << "velocities: ";
+            for( it = corrected_vs.begin(); it != corrected_vs.end(); ++it )
+                std::cout << norm(*it) << " ";
+            std::cout << std::endl;
+            std::cout << "updated_accelerations: ";
+            for( it = updated_as.begin(); it != updated_as.end(); ++it )
+                std::cout << norm(*it) << " ";
+            std::cout << std::endl;*/
+
+            /* najlepsze jest rozwiniecie Taylor'a. Dlaczego? TODO 
+            rs = corrected_rs;
+            vs = corrected_vs;*/
+            ++counter;
+            if( counter > 0 )
+                is_acceleration_converged = true; // TODO temporary
         }
-        print( rs, "two-body positions");
-        print( corrected_rs, "corrected_rs" );
-        print( vs, "two-body velocities");
-       // print( as, "two-body accelerations");
 
-        print( corrected_vs, "corrected_vs" );
+        //***************************************************************** PREDICT 
+        //
+        for( int c = 0; c<1; ++c )
+        //for( int c = 0; c<2; ++c )
+        {
+            // 4. Calculate S(n+1)
+            Vector S = Sn.back() + sn.back() + as.back()/2;
+            Sn.push_back( S );
+            Sn.pop_front();
 
-        is_acceleration_converged = true; // TODO temporary
-    }
+            // 5. & 6. Calculate b5 and a5
+            Vector b5 = Calca5( b, as );
+            Vector a5 = Calca5( a, as );
+
+            // 7. Calculate pred_vn, pred_rn
+            Vector pred_vn = { 0, 0, 0 }; // eq. 77
+            Vector pred_rn = { 0, 0, 0 }; // eq. 88
+            pred_vn = h*(sn.back() + as.back() + b5 );
+            pred_rn = h*h*(S + a5 );
+
+            print( pred_vn, "predicted v");
+            print( pred_rn, "predicted r");
+    
+            vs.push_back( pred_vn );
+            rs.push_back( pred_rn );
+
+            // EVALUATE - CORRECT
+            // 8. Evaluate the acceleration
+            as.push_back( Acceleration( pred_rn ) );
+    
+            int index = 5;
+            bool v_and_r_converged = false;
+            int it_number = 1;
+            int max_it_number = 5;
+            // 10. while v and r have not converged 
+            //     and the maximum nb of corrector iterations is not exceeded:
+            while( !v_and_r_converged && it_number <= max_it_number )
+            {
+                std::cout << "in while " << std::endl;
+                // TODO Calcsn zapisuje nowe sn na koniec kolejki
+                Calcsn( sn, as, index ) ; 
+                sn.pop_front(); // TODO temporary prawdopodobnie 
+                std::cout << "calcSn done" << std::endl;
+                Vector sum_b4 = { 0, 0, 0 };
+                Vector sum_a4 = { 0, 0, 0 };
+//                if( it_number == 1 )
+                {
+                    for( int k=0; k<9; ++k )
+                    //for( int k=0; k<8; ++k )
+                    {
+                        // step 10 b.
+                        sum_b4 = sum_b4 + b.at(8).at(k)*as.at(index-4+k);
+                        sum_a4 = sum_a4 + a.at(8).at(k)*as.at(index-4+k);
+                    }
+                }
+                // step 10 c.
+                // pominiete, bo w 10b policzone dla wszyskich k
+                // step 10 d. 
+                // sum: sn.back(), sum_b4, sum_a4, 10c to obtain:
+                // v (79) and r (89)
+                std::cout << "size as = " << as.size() << std::endl;
+                Vector next_v = h*(sn.back() + sum_b4);
+                Vector next_r = h*h*(Sn.back() + sum_a4);
+        //        Vector new_rn = h*(sn.back() + )
+            
+                rs.push_back( next_r );
+                vs.push_back( next_v );
+
+                ++it_number;
+                v_and_r_converged = true;
+            } // while max_it_number and ...  
+        }
+    } // pointNb = 0
+    std::cout << "positions: ";
+    for( it = rs.begin(); it != rs.end(); ++it )
+        std::cout << norm(*it) << " ";
+    std::cout << std::endl;
+    std::cout << "velocities: ";
+    for( it = vs.begin(); it != vs.end(); ++it )
+        std::cout << norm(*it) << " ";
+    std::cout << std::endl;
+        std::cout << "updated_accelerations: ";
+        for( it = as.begin(); it != as.end(); ++it )
+            std::cout << norm(*it) << " ";
+        std::cout << std::endl;
 
 
-
-
+        std::vector< std::vector< Vector > > positionsVector;
+        positionsVector.push_back( rs );
+        saveVectorToFile( positionsVector, "positionsVector" );
 /*    for( int ti = h; ti<T; ti += h )
     {
         std::vector< Vector > solved_ode = OdeNystrom( r0, v0, h );
@@ -288,7 +412,7 @@ void SimulationFromZeroNystrom()
     std::cout << "obliczono " << rs.size() << " pozycji " << std::endl;
     std::vector< std::vector< Vector > > positions;
     positions.push_back( rs );
-    saveVectorToFile( positions, "positions");
+    saveVectorToFile( positions, "positionsNystrom");
 
 }
 
@@ -337,7 +461,7 @@ void SimulationNGA() // nie dziala
     std::cout << "obliczono " << rs.size() << " pozycji " << std::endl;
     std::vector< std::vector< Vector > > positions;
     positions.push_back( rs );
-    saveVectorToFile( positions, "positions");
+    saveVectorToFile( positions, "positionsNystrom");
 }
 
 void SimulationSin()
