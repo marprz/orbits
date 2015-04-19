@@ -20,10 +20,14 @@ double kRE = 6738;
 double kRE2 = kRE*kRE;
 double kJ2 = 0.00108263;
 
-void saveVectorToFile( const std::vector< std::vector< Vector > >& positions, const std::string& outName )
+void saveVectorToFile( const std::vector< std::vector< Vector > >& positions, const std::string& outName, const int& rows = 0 )
 {
     int satellites_nb = positions.size();
-    int positions_nb = positions.at(0).size();
+    int positions_nb;
+    if( rows != 0 )
+        positions_nb = rows;
+    else 
+        positions_nb = positions.at(0).size();
     std::cout << "satellites_nb = " << satellites_nb << ", positions_nb = " << positions_nb << std::endl;
     std::fstream outFile;
     outFile.open( outName.c_str(), std::ios::out | std::ios::in );
@@ -42,7 +46,7 @@ void saveVectorToFile( const std::vector< std::vector< Vector > >& positions, co
                 double y = ((positions.at(i)).at(j)).at(1);
                 double z = ((positions.at(i)).at(j)).at(2);
                 outFile << x << " " << y << " " << z << ";\n";
-                std::cout << x << " " << y << " " << z << ";\n";
+//                std::cout << x << " " << y << " " << z << ";\n";
              //   std::cout << "acceleration: " << norm(Acceleration( (positions.at(i)).at(j))) << std::endl;
             }
             outFile << ((positions.at(i)).at(temp_pos_nb-1)).at(0) << " " << ((positions.at(i)).at(temp_pos_nb-1)).at(1) << " " << ((positions.at(i)).at(temp_pos_nb-1)).at(2) << "];\n";
@@ -73,6 +77,52 @@ MatrixD createMatrix( std::vector< double > v )
 
     return M;
 }
+
+double norm( const Vector& v )
+{
+    double ret = 0;
+    for( int i=0; i<v.size(); ++i )
+        ret += (v.at(i))*(v.at(i));
+    ret = sqrt( ret );
+    return ret;
+}
+
+
+void print( Vector V, std::string name = "Vector" )
+{
+    if( name != "" )
+    {
+        std::cout << name << ": ";
+    }
+//    double r = sqrt( pow(V.at(0),2) + pow(V.at(1),2) + pow(V.at(2),2) );
+    for( int i=0; i<V.size(); ++i )
+    {
+        std::setprecision(10);
+        std::cout.width( 10 );
+        std::cout << V.at(i) << " ";
+    }
+    std::cout << "   [ " << norm(V) << " ] " << std::endl;
+}
+
+
+void print( std::vector< Vector > v, std::string name = "Vector" )
+{
+    std::cout << name << ": " << std::endl;
+    std::vector< Vector >::iterator it;
+    for( it = v.begin(); it != v.end(); ++it )
+        print( *it, "" );
+    std::cout << std::endl;
+}
+
+void print( const std::deque< Vector >& v, std::string name = "Vector" )
+{
+    std::cout << name << ": " << std::endl;
+    std::deque< Vector >::const_iterator it;
+    for( it = v.begin(); it != v.end(); ++it )
+        print( *it, "" );
+    std::cout << std::endl;
+}
+
 
 Vector operator*( double d, Vector v )
 {
@@ -200,41 +250,6 @@ void Transpose( MatrixD& M )
         }
     }
 }
-
-void print( Vector V, std::string name = "Vector" )
-{
-    if( name != "" )
-    {
-        std::cout << std::endl << name << ": ";
-    }
-//    double r = sqrt( pow(V.at(0),2) + pow(V.at(1),2) + pow(V.at(2),2) );
-    for( int i=0; i<V.size(); ++i )
-    {
-        std::cout.width( 10 );
-        std::cout << V.at(i) << " ";
-    }
-    std::cout << std::endl;
-}
-
-
-void print( std::vector< Vector > v, std::string name = "Vector" )
-{
-    std::cout << name << ": " << std::endl;
-    std::vector< Vector >::iterator it;
-    for( it = v.begin(); it != v.end(); ++it )
-        print( *it, "" );
-    std::cout << std::endl;
-}
-
-void print( const std::deque< Vector >& v, std::string name = "Vector" )
-{
-    std::cout << name << ": " << std::endl;
-    std::deque< Vector >::const_iterator it;
-    for( it = v.begin(); it != v.end(); ++it )
-        print( *it, "" );
-    std::cout << std::endl;
-}
-
 
 double degreeToRad( double deg )
 {
@@ -615,15 +630,6 @@ Vector operator- ( const Vector& v1, const Vector& v2 )
         ret.push_back( v1.at(i)-v2.at(i) );
     return ret;
 }*/
-
-double norm( const Vector& v )
-{
-    double ret = 0;
-    for( int i=0; i<v.size(); ++i )
-        ret += (v.at(i))*(v.at(i));
-    ret = sqrt( ret );
-    return ret;
-}
 
 // vector: <x,y,z>
 // parameter: vector < R, Lat, Lon > 
@@ -1083,30 +1089,7 @@ void nutationParameters( MatrixI& k, MatrixD& A, MatrixD& B )
     }*/
 }
 
-void GaussJacksonCoefficients( MatrixD& a, MatrixD& b )
-{
-    b = { { 19087.0/89600, -427487.0/725760, 3498217.0/3628800, -500327.0/403200, 6467.0/5670, -2616161.0/3628800, 24019.0/80640, -263077.0/3628800, 8183.0/1036800 },
-        {8183.0/1036800, 57251.0/403200, -1106377.0/3628800, 218483.0/725760, -69.0/280, 530177.0/3628800, -210359.0/3628800, 5533.0/403200, -425.0/290304},
-        {-425.0/290304, 76453.0/3628800, 5143.0/57600, -660127.0/3628800, 661.0/5670, -4997.0/80640, 83927.0/3628800, -19109.0/3628800, 7.0/12800},
-        {7.0/12800, -23173.0/3628800, 29579.0/725760, 2497.0/57600, -2563.0/22680, 172993.0/3628800, -6463.0/403200, 2497.0/725760, -2497.0/7257600},
-        {-2497.0/7257600, 1469.0/403200, -68119.0/3628800, 252769.0/3628800, 0, -252769.0/3628800, 68119.0/3628800, -1469.0/403200, 2497.0/7257600},
-        {2497.0/7257600, -2497.0/725760, 6463.0/403200, -172993.0/3628800, 2563.0/22680, -2497.0/57600, -29579.0/725760, 23173.0/3628800, -7.0/12800},
-        {-7.0/12800, 19109.0/3628800, -83927.0/3628800, 4997.0/80640, -661.0/5670, 660127.0/3628800, -5143.0/57600, -76453.0/3628800, 425.0/290304},
-        {425.0/290304, -5533.0/403200, 210359.0/3628800, -530177.0/3628800, 69.0/280, -218483.0/725760, 1106377.0/3628800, -57251.0/403200, -8183.0/1036800},
-        {-8183.0/1036800, 263077.0/3628800, -24019.0/80640, 261616.0/3628800, -6467.0/5670, 500327.0/403200, -3498217.0/3628800, 427487.0/725760, -19087.0/89600},
-        {25713.0/89600, -9401029.0/3628800, 5393233.0/518400, -9839609.0/403200, 167287.0/4536, -135352319.0/3628800, 10219841.0/403200, -40987771.0/3628800, 3288521.0/1036800 }};
 
-    a = { { 3250433.0/53222400, 572741.0/5702400, -8701681.0/39916800, 4026311.0/13305600, -917039.0/3193344, 7370669.0/39916800, -1025779.0/13305600, 754331.0/39916800, -330157.0/159667200},
-        {-330157.0/159667200, 530113.0/6652800, 518887.0/19958400, -27631.0/623700, 44773.0/1064448, -531521.0/19958400, 109343.0/9979200, -1261.0/475200, 45911.0/159667200},
-        {45911.0/159667200, -185839.0/39916800, 171137.0/1900800, 73643.0/39916800, -25775.0/3193344, 77597.0/13305600, -98911.0/39916800, 24173.0/39916800, -3499.0/53222400},
-        {-3499.0/53222400, 4387.0/4989600, -35039.0/4989600, 90817.0/950400, -20561.0/3193344, 2117.0/9979200, 2059.0/6652800, -317.0/2851200, 317.0/22809600},
-        {317.0/22809600, -2539.0/13305600, 55067.0/39916800, -326911.0/39916800, 14797.0/152064, -326911.0/39916800, 55067.0/39916800, -2539.0/13305600, 317.0/22809600},
-        {317.0/22809600, -317.0/2851200, 2059.0/6652800, 2117.0/9979200, -20561.0/3193344, 90817.0/950400, -35039.0/4989600, 4387.0/4989600, -3499.0/53222400},
-        {-3499.0/53222400, 24173.0/39916800, -98911.0/39916800, 77597.0/13305600, -25775.0/3193344, 73643.0/39916800, 171137.0/1900800, -185839.0/39916800, 45911.0/159667200},
-        {45911.0/159667200, -1261.0/475200, 109343.0/9979200, -531521.0/19958400, 44773.0/1064448, -27631.0/623700, 518887.0/19958400, 530113.0/6652800, -330157.0/159667200},
-        {-330157.0/159667200, 754331.0/39916800, -1025779.0/13305600, 7370669.0/39916800, -917039.0/3193344, 4026311.0/13305600, -8701681.0/39916800, 572741.0/5702400, 3250433.0/53222400},
-        {3250433.0/53222400, -11011481.0/19958400, 6322573.0/2851200, -8660609.0/1663200, 25162927.0/3193344, -159314453.0/19958400, 18071351.0/3326400, -24115843.0/9979200, 103798439.0/159667200 }};
-}
 
 
 #endif // DEF_H

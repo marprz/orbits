@@ -8,6 +8,11 @@
 // ~0.00056 km/s
 Vector Acceleration( const Vector& position )
 {
+    Vector ret = {-position.at(0), 0, 0};
+    return ret;
+}
+/*Vector Acceleration( const Vector& position )
+{
     Vector acc = { 0, 0, 0 };
     double x = position.at(0);
     double y = position.at(1);
@@ -22,5 +27,6 @@ Vector Acceleration( const Vector& position )
         acc.at(i) = nuR3*position.at(i)-pp*position.at(i)*(c.at(i)-z2r2);
     }
     return acc;
-}
+}*/
+
 #endif

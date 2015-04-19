@@ -65,4 +65,18 @@ std::vector< T > taylorSeriesTwoBody( int nb, double h, std::vector< T > f )
     return ret;
 }
 
+std::vector< Vector > taylorSeriesSin( int nb, double h )
+{
+    std::vector< Vector > ret;
+    int firstIndex = -floor((nb-1)/2);
+    for( int i = firstIndex; i<nb+firstIndex; ++i )
+    {
+        double h2 = h*i;
+        Vector serie = { h2-pow(h2,3)/6+pow(h2,5)/120, 0, 0 };
+        std::cout << "h2=" << h2 << ", taylor=" << serie.at(0) << std::endl;
+        ret.push_back( serie );
+    }
+    return ret;
+}
+
 
