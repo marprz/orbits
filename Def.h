@@ -55,6 +55,55 @@ void saveVectorToFile( const std::vector< std::vector< Vector > >& positions, co
     outFile.close();
 }
 
+void saveVectorToFile( const std::vector< Vector >& positions, const std::string& outName, const double& h=0, const int& rows = 0 )
+{
+    std::cout << "saveVectorToFile: h=" << h << std::endl;
+    int positions_nb;
+    if( rows != 0 )
+        positions_nb = rows;
+    else 
+        positions_nb = positions.size();
+    std::fstream outFile;
+    outFile.open( outName.c_str(), std::ios::out | std::ios::in );
+    outFile << "function p = " << outName << "\n";
+    int col = 3;
+    if( h != 0 )
+        ++col;
+    outFile << "p=zeros(" << positions_nb << ", " << col << " );\n";
+    int temp_pos_nb = positions.size();
+    if( temp_pos_nb > 0 )
+    {
+        outFile << "p = [ ";
+        for( int j=0; j<temp_pos_nb; ++j )
+       // for( int j=0; j<temp_pos_nb-1; ++j )
+        {
+            double x = (positions.at(j)).at(0);
+            double y = (positions.at(j)).at(1);
+            double z = (positions.at(j)).at(2);
+            if( h == 0 )
+            {
+                if( temp_pos_nb-1 == j )
+                    outFile << x << " " << y << " " << z << "];\n";
+                else
+                    outFile << x << " " << y << " " << z << ";\n";
+            }
+            else
+            {
+                double t = (j-4)*h;
+                if( temp_pos_nb-1 == j )
+                    outFile << t << " " << x << " " << y << " " << z << "];\n";
+                else
+                    outFile << t << " " << x << " " << y << " " << z << ";\n";
+            }
+ 
+        }
+//        outFile << (positions.at(temp_pos_nb-1)).at(0) << " " << (positions.at(temp_pos_nb-1)).at(1) << " " << (positions.at(temp_pos_nb-1)).at(2) << "];\n";
+
+    }
+    outFile.close();
+}
+
+
 
 MatrixD createMatrix( std::vector< double > v )
 {
@@ -129,6 +178,11 @@ Vector operator*( double d, Vector v )
     for( int i=0; i<v.size(); ++i )
         v.at(i) *= d;
     return v;
+}
+
+Vector operator*( Vector v, double d )
+{
+    return d*v;
 }
 
 Vector operator-( Vector v1, Vector v2 )

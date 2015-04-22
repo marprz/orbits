@@ -40,26 +40,40 @@ std::vector< T > taylorSeries( int nb, double h, std::vector< T > f )
     return ret;
 }
 
-template< typename T >
-T taylorSerieTwoBody( double h, std::vector< T > f )
+Vector taylorSerieTwoBody( double h, std::vector< Vector > f )
 {
-    T r = f.at(0);
-    T v = f.at(1);
+    Vector r = f.at(0);
+    Vector v = f.at(1);
+    Vector a = f.at(2);
     double r_mag = norm(r);
+    double r_mag2 = r_mag*r_mag;
+    double r_mag3 = r_mag2*r_mag;
+    double r_mag4 = r_mag3*r_mag;
+    double r_mag5 = r_mag4*r_mag;
+    double r_mag6 = r_mag5*r_mag;
 
-    double product = r.at(0)*v.at(0) + r.at(1)*v.at(1) + r.at(2)*v.at(2);
-    T ret = r + h*v - h*h*kmuE/(2*pow(r_mag,3)) * r + pow(h,3)*( kmuE*product*h/(2*pow(r_mag,5))*r - kmuE/(6*pow(r_mag,3))*v );
+    double r_pr = r.at(0)*v.at(0) + r.at(1)*v.at(1) + r.at(2)*v.at(2);
+    Vector vec1 = { 1, 1, 1 };
+    Vector vec2 = { 2, 2, 2 };
+
+    Vector d3 = kmuE*( 1/r_mag3*v - 3*(r*v)*r/r_mag5);
+    Vector d41 = -kmuE*( -3*r/r_mag6 * r_pr + a/r_mag3 );
+    Vector d42 = 3*kmuE*( r/r_mag5*( -3*r_pr + r*a ) );
+    Vector d4 = d41+d42;
+//    T d51 = 3/r_mag5 * v * ( 4*a - 3*r*a ) + d3/r_mag3;
+//    T d52 = ( v/r_mag5 * ( vec1-5*r/r_mag2 ) )* ( r*a + v*v*(vec2-5*r/r_mag2) ) + r/r_mag5*( 5*v*a*( vec1-2*r/r_mag2 ) + r*d3 + 5*v*v*v*(2*r_mag2 - 1/r_mag2) );
+//    T d5 = -kmuE*d51 + 3*kmuE*d52;
+    Vector ret = r + h*v + h*h*a/2 + d3*pow(h,3)/6 + d4*pow(h,4)/24;//+ d5*pow(h,5)/120;
     return ret;
 }
 
-template< typename T >
-std::vector< T > taylorSeriesTwoBody( int nb, double h, std::vector< T > f )
+std::vector< Vector > taylorSeriesTwoBody( int nb, double h, std::vector< Vector > f )
 {
-    std::vector< T > ret;
+    std::vector< Vector > ret;
     int firstIndex = -floor((nb-1)/2);
     for( int i = firstIndex; i<nb+firstIndex; ++i )
     {
-        T serie = taylorSerieTwoBody( i*h, f );
+        Vector serie = taylorSerieTwoBody( i*h, f );
         ret.push_back( serie );
     }
     return ret;

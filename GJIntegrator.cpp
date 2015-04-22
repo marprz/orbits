@@ -1,52 +1,62 @@
 #include "GJIntegrator.h"
 
-GJIntegrator::GJIntegrator()
+GJIntegrator::GJIntegrator( Vector (*p_Acceleration)(Vector), std::vector< Vector > (*p_Taylor)( int, double, std::vector< Vector > ), std::vector< Vector > (*p_TaylorV)( int, double, std::vector< Vector >) )
 {
     ra = kRE+20394; // apogee [km]
     rp = kRE+19970; // perigee [km]
     sa = (rp+ra)/2;  // semi-major axis
     T = 2*M_PI*sqrt( pow(sa,3)/kmuE ); // period ~12h
+
+    Taylor = p_Taylor;
+    TaylorV = p_TaylorV;
+    Acceleration = p_Acceleration;
+    isInitKnown = false;
 }
 
-Vector GJIntegrator::Acceleration( const Vector& position )
+GJIntegrator::GJIntegrator( const Vector& r0, const Vector& v0, Vector (*p_Acceleration)(Vector), std::vector< Vector > (*p_Taylor)( int, double, std::vector< Vector > ), std::vector< Vector > (*p_TaylorV)(int, double, std::vector< Vector >) )
 {
-    Vector acc = { 0, 0, 0 };
-    double x = position.at(0);
-    double y = position.at(1);
-    double z = position.at(2);
-    double r_mag = sqrt( x*x + y*y + z*z );
-    double nuR3 = -kmuE/(pow(r_mag,3));
-    double pp = 3/2 *kmuE*kJ2*kRE2/(pow(r_mag,5));
-    double z2r2 = 5*pow(position.at(2)/r_mag,2);
-    Vector c = { 1, 1, 3 };
-    for( int i=0; i<3; ++i )
-    {
-        acc.at(i) = nuR3*position.at(i)-pp*position.at(i)*(c.at(i)-z2r2);
-    }
-    print( acc, "ACCELERATION");
-    return acc;
+    ra = kRE+20394; // apogee [km]
+    rp = kRE+19970; // perigee [km]
+    sa = (rp+ra)/2;  // semi-major axis
+    T = 2*M_PI*sqrt( pow(sa,3)/kmuE ); // period ~12h
+    setPos0( r0 );
+    setVel0( v0 );
+    isInitKnown = true;
+    
+    Taylor = p_Taylor;
+    TaylorV = p_TaylorV;
+    Acceleration = p_Acceleration;
 }
 
 InitialVectors GJIntegrator::InitializeVectorsGJ( int nb, double h )
 {
+    std::cout << "h = " << h << std::endl;
     InitialVectors init;
-    double Vp = sqrt( kmuE*(2/rp-1/sa)); // speed at perigee
-    Vector r0 = { rp, 0, 0 };
-    Vector v0 = { 0, Vp*sqrt(2)/2, Vp*sqrt(2)/2 };
-    Vector a0 = Acceleration( r0 );
 
-    std::vector< Vector > fr = { r0, v0, a0 };
-    std::vector< Vector > fv = { v0, a0 };
+    // initial position, velocity and acceleration:
+    if( !isInitKnown )
+    {
+        double Vp = sqrt( kmuE*(2/rp-1/sa)); // speed at perigee
+        setPos0( { rp, 0, 0 } );
+        setVel0( { 0, Vp*sqrt(2)/2, Vp*sqrt(2)/2 } );
+    }
+
+    print( r0, "r0" );
+    print( Acceleration( r0 ) , "acceleration(r0)" );
+    std::cout << "fr: " << std::endl;
+    std::vector< Vector > fr = { r0, v0, Acceleration( r0 ) };
+    std::vector< Vector > fv = { v0, Acceleration( r0 ) };
+
+    std::cout << "Taylor: " << std::endl;
     // TWO-BODY TAYLOR:
-    std::vector< Vector > rs = taylorSeriesTwoBody( 10, h, fr ); // potrzeba 9 pozycji do algorytmu. 10-ta jest do obliczenia predkosci jako pochodnych pozycji
-//    std::vector< Vector > rs = taylorSeriesSin( 10, h ); // potrzeba 9 pozycji do algorytmu. 10-ta jest do obliczenia predkosci jako pochodnych pozycji
-    std::vector< Vector > vs;
-    std::vector< Vector > as;
+    rs = Taylor( 10, h, fr ); // potrzeba 9 pozycji do algorytmu. 10-ta jest do obliczenia predkosci jako pochodnych pozycji
+    vs = TaylorV( 9, h, fr );
+
     std::vector< Vector >::iterator it;
-    for( int i=0; i<rs.size()-1; ++i )
+    /*for( int i=0; i<rs.size()-1; ++i )
     {
         vs.push_back( 1/h*(rs.at(i+1)-rs.at(i)) );
-    }
+    }*/
     rs.pop_back(); // ostatni element byl potrzebny tylko do liczenia predkosci
     for( it = rs.begin(); it != rs.end(); ++it )
     {
@@ -61,22 +71,16 @@ InitialVectors GJIntegrator::InitializeVectorsGJ( int nb, double h )
 // equation 75 s0 = C1'
 Vector GJIntegrator::Calcs0( const Vector& v0, const double& h )
 {
+    std::cout << "Calcs0\n as.size() = " << as.size() << std::endl;
+    print( v0, "v0" );
     bool debug = true;
     Vector ret;
     Vector sum = { 0, 0, 0 };
-    std::cout << "Calculating s0:" << std::endl;
     for( int i=0; i<as.size(); ++i )
     {
         sum = sum + b.at(4).at(i)*as.at(i);
-        if( debug )
-        {
-            std::cout << "b.at(4).at(" << i << ") = " << b.at(4).at(i) << std::endl << "as.at(" << i << ")=";
-            print( as.at(i), "");
-            print( sum, "sum");
-        }
     }
     ret = v0/h-sum;
-    print( ret, "s0" );
     return ret;
 }
 
@@ -111,10 +115,12 @@ Vector GJIntegrator::Calcsn( const int& index )
     if( index < 0 )
     {
         // example: index=-1 => a(n) = 3, a(n+1) = 4; 3=index+4, 4=index+5
+        std::cout << "Calculating sn(" << index << ") - takes as.at(" << index+5 << ") and as.at(" << index+4 << ")" << std::endl;
         s = sn.front() - ( as.at(index+5) + as.at(index+4) )/2;
     } 
     else
     {
+        std::cout << "Calculating sn(" << index << ") - takes as.at(" << index+4-1 << ") and as.at(" << index+5-1 << ")" << std::endl;
         s = sn.back() + ( as.at(index+4-1) + as.at(index+5-1) )/2;
     }
     return s;
@@ -135,10 +141,12 @@ Vector GJIntegrator::CalcSn( const int& index )
     if( index < 0 )
     {
         // example: index=-1 => a(n) = 3, a(n+1) = 4; 3=index+4, 4=index+5
+        std::cout << "Calculating Sn(" << index << ") - takes sn.at(" << index+5 << ") and as.at(" << index+5 << ")" << std::endl;
         S = Sn.front() - sn.at(index+5) +(as.at(index+5))/2;
     } 
     else
     {
+        std::cout << "Calculating Sn(" << index << ") - takes sn.at(" << index+4 << ") and as.at(" << index+4 << ")" << std::endl;
         S = Sn.back() + sn.at(index+4) + as.at(index+4)/2;
     }
     return S;
@@ -205,6 +213,7 @@ Vector GJIntegrator::Calca5()
     {
         ret = ret + a.at(9).at(9-i-1)*as.at(as_size-i-1) ;
     }
+    print( as.back(), "Prediction - last as" );
     return ret;
 }
 
@@ -233,9 +242,12 @@ bool GJIntegrator::IsAccelerationConverged() // TODO temporary !!!!!!!!
     return true; // FAKE TODO zrobic tu prawdziwa funkcje!
 }
 
-void GJIntegrator::Startup( const double& h, std::vector< Vector >& corrected_rs, std::vector< Vector >& corrected_vs, std::vector< Vector >& updated_as, Vector r0, Vector v0 )
+void GJIntegrator::Startup( const double& h, std::vector< Vector >& corrected_rs, std::vector< Vector >& corrected_vs, std::vector< Vector >& updated_as )
 {
+    std::cout << "h = " << h << std::endl;
+    std::cout << "Begin Startup " << std::endl;
     // sn:
+    sn.clear();
     Vector s0 = Calcs0( v0, h ); //Calcs0( Vector v0, MatrixD b, std::vector< Vector > as, double h )
     sn.push_back( s0 );
     for( int i=1; i<5; ++i )
@@ -245,6 +257,7 @@ void GJIntegrator::Startup( const double& h, std::vector< Vector >& corrected_rs
     }
 
     // Sn:
+    Sn.clear();
     Vector S0 = CalcS0( r0, h ); //Calcs0( Vector v0, MatrixD b, std::vector< Vector > as, double h )
     Sn.push_back( S0 );
     for( int i=1; i<5; ++i )
@@ -269,15 +282,22 @@ void GJIntegrator::Startup( const double& h, std::vector< Vector >& corrected_rs
         }
         else 
         {
-            corrected_vs.push_back( h*(sn.at(i)+sum_bn.at(i)) );
-            corrected_rs.push_back( h*h*(Sn.at(i)+sum_an.at(i)) );
+            print( vs.at(i), "old velocity ");
+            corrected_vs.push_back( h*(sn.at(i)+sum_bn.at(i)) ); // eq. 74 - mid-corrector
+            print( corrected_vs.at(i), "new velocity ");
+            print( rs.at(i), "old position");
+            corrected_rs.push_back( h*h*(Sn.at(i)+sum_an.at(i)) ); // eq. 87 - mid-corrector
+            print( rs.at(i), "new position");
+            std::cout << std::endl;
         }
         updated_as.push_back( Acceleration( corrected_rs.back() ) );
     }
+    std::cout << "End of Startup" << std::endl << std::endl;
 }
 
 Vector GJIntegrator::PredictR( const double& h )
 {
+    std::cout << "h = " << h << std::endl;
     // 6. Calculate a5
     Vector a5 = Calca5();
 
@@ -301,10 +321,18 @@ Vector GJIntegrator::PredictV( const double& h )
     return pred_vn;
 }
 
+Vector GJIntegrator::MidCorrectR( const int& i, const double& h )
+{
+    Vector ak = a.at(i); 
+    Vector _sum = { 0, 0, 0 };
+    for( int j=0; j<9; ++j )
+        _sum = _sum + ak.at(j)*as.at(i);
+    return ( h*h*(Sn.at(i)) + _sum );
+}
+
 Vector GJIntegrator::CorrectR( const double& h )
 {
     Vector corr_rn;
-    std::cout << " EVALUATE - CORRECT" << std::endl;
     int index = as.size()-5;
     Vector sum_a4 = { 0, 0, 0 };
     for( int k=0; k<9; ++k )
@@ -314,24 +342,18 @@ Vector GJIntegrator::CorrectR( const double& h )
         sum_a4 = sum_a4 + a.at(8).at(k)*as.at(index-4+k);
     }
     corr_rn = h*h*(Sn.back() + sum_a4);
-    print( corr_rn, "corrected r");
-           
-    as.pop_back();
-    as.push_back( Acceleration( corr_rn ) );
-
+    
     return corr_rn;
 }
 
 Vector GJIntegrator::CorrectV( const double& h )
 {
     Vector corr_vn;
-    std::cout << " EVALUATE - CORRECT" << std::endl;
     int index = 5;
     int s_as = as.size();
     Vector s = CalcNexts( sn.back(), as.at( s_as-2 ), as.back()  ) ; 
     sn.push_back( s ) ; 
     Vector sum_b4 = { 0, 0, 0 };
-    Vector sum_a4 = { 0, 0, 0 };
 //                if( it_number == 1 )
     {
         for( int k=0; k<9; ++k )
@@ -339,34 +361,28 @@ Vector GJIntegrator::CorrectV( const double& h )
         {
             // step 10 b.
             sum_b4 = sum_b4 + b.at(8).at(k)*as.at(index-4+k);
-            sum_a4 = sum_a4 + a.at(8).at(k)*as.at(index-4+k);
         }
     }
     corr_vn = h*(sn.back() + sum_b4);
-    print( corr_vn, "corrected v");
-            
-//                vs.push_back( next_v );
-
     return corr_vn;
 }
 
 void GJIntegrator::Algorithm( int points, double h )
 {
+    points = T/h+1;
+    std::cout << "points: " << points << std::endl;
 //    points = static_cast< int >( T/h );
     int n = 9;
-    double h1 = 5; // step size in seconds
-    h1 = h;
-    double h2 = h1;
     int pointNb1 = points; 
     int pointNb2 = pointNb1;;
-    InitialVectors init = InitializeVectorsGJ( n, h1 );
+    std::cout << "InitializeVectorsGJ: " << std::endl;
+    InitialVectors init = InitializeVectorsGJ( n, h );
+    std::cout << "InitializeVectorsGJ - done " << std::endl;
     rs = init.at(0);
     vs = init.at(1);
     as = init.at(2);
 
     InitializeGaussJacksonCoefficients();
-
-    std::cout << "po inicjalizacji " << std::endl;
 
     bool is_acceleration_converged = false;
     int counter = 1; 
@@ -380,7 +396,7 @@ void GJIntegrator::Algorithm( int points, double h )
         std::vector< Vector > corrected_rs; // eq. 87
         std::vector< Vector > updated_as; 
 
-        Startup( h1, corrected_rs, corrected_vs, updated_as, rs.at(4), vs.at(4) );
+        Startup( h, corrected_rs, corrected_vs, updated_as );
         if( tempCounter == 0 ) 
         {
             is_acceleration_converged = IsAccelerationConverged(); // TODO temporary !!!!!!!!
@@ -403,20 +419,39 @@ void GJIntegrator::Algorithm( int points, double h )
         {
             as.at(i) = Acceleration( rs.at(i) );
         }
+        
+        for( int i = 0; i < rs.size(); ++i )
+        {
+            as.at(i) = Acceleration( rs.at(i) );
+        }
+
+
+ 
+        std::cout << "rs.size() = " << rs.size() << std::endl << std::endl;
+/*        std::cout << "Compare positions with mid-corrector: " << std::endl;
+        for( int i=0; i<9; ++i )
+        {
+            print( rs.at(i), "rs:" );
+            print( newrs.at(i), "new" );
+            std::cout << std::endl;
+        }*/
     }
 
+    std::cout << "After startup rs.size()=" << rs.size() << std::endl;
     MatrixD::iterator iterV;
     for( iterV = rs.begin(); iterV != rs.end(); ++iterV )
         print( *iterV, "position(i)");
     for( iterV = as.begin(); iterV != as.end(); ++iterV )
         print( *iterV, "acceleration(i)");
-
-
-
+    
+    std::vector< Vector > uncorrected_rs = rs;
+    std::vector< Vector > uncorrected_vs = vs;
     int iterPoints = points;
     while( iterPoints > 0 )
     {
         --iterPoints;
+        int pointInd = points-iterPoints; 
+        std::cout << "\nCALCULATING POINT " << points-iterPoints << std::endl;
 
         //*********************************************************** PREDICT 
         //
@@ -428,186 +463,76 @@ void GJIntegrator::Algorithm( int points, double h )
         Vector pred_vn = { 0, 0, 0 }; // eq. 77
         Vector pred_rn = { 0, 0, 0 }; // eq. 88
         // c - liczba iteracji
-        pred_rn = PredictR( h1 );
-        pred_vn = PredictV( h1 );
+        pred_rn = PredictR( h );
+        pred_vn = PredictV( h );
 
+        uncorrected_rs.push_back( pred_rn );
+        uncorrected_vs.push_back( pred_vn );
 //        Predict( Sn, sn, a, b, as, h, pred_rn, pred_vn );
         rs.push_back( pred_rn );
         vs.push_back( pred_vn );
 
         // EVALUATED ACCELERATION: 
-        print( Acceleration( pred_rn ), " last_as" );
         as.push_back( Acceleration( pred_rn ) );
 
-        for( int k = 0; k<4; ++k )
+        print( as.back(), "predicted as" );
+        print( pred_rn, "predicted r" );
+        
+        double temph = (pointInd+4)*h; 
+        Vector ex_r = { sin(temph), 0, 0 };
+    //    print( ex_r, "exact r" );
+        Vector corr_vn; // eq. 79
+        Vector corr_rn; // eq. 89       
+
+/*        // usunac przy odkomentowywaniu kodu ponizej
+            int as_size = as.size();
+            Vector next_sn = sn.back() + ( as.back() + as.at(as_size-2) )/2;
+            sn.push_back( next_sn );
+            print( sn.back(), "calculated sn" );
+*/
+        // Correction:
+        for( int k = 0; k<1; ++k )
         {
+            std::cout << "CORRECTION NB. " << k+1 << std::endl;
 
-            Vector corr_vn; // eq. 79
-            Vector corr_rn; // eq. 89
-            int max_it_number = 4;
-            corr_rn = CorrectR( h1 ); 
-            //corr_rn = Correct( counter, as, pred_rn, corr_vn, max_it_number, Sn, sn, h, a, b ); 
-            Vector pos_diff = corr_rn-pred_rn;
-            print( pos_diff, "difference in positions");
+            if( k != 0 )
+            {
+                sn.pop_back();
+            }
+            int as_size = as.size();
+            Vector next_sn = sn.back() + ( as.back() + as.at(as_size-2) )/2;
+            sn.push_back( next_sn );
+            print( sn.back(), "calculated sn" );
 
-       //     vs.push_back( corr_vn );
+            corr_rn = CorrectR( h ); 
+            corr_vn = CorrectV( h );
+
+            Vector d_r = corr_rn - rs.back(); 
+            print( d_r, "roznica w polozeniu: ");
+
+            Vector d_a = as.back() - Acceleration( corr_rn );
+            print( d_a, "przyspieszenie - roznica");
+            print( Acceleration( corr_rn ), "calc acceleration" );
+
+            as.pop_back();
+            as.push_back( Acceleration( corr_rn ) );
+
             rs.pop_back();
             rs.push_back( corr_rn );
+            vs.pop_back();
+            vs.push_back( corr_vn );           
+            
         }
-
-        int sn_size = sn.size();
-        Vector next_sn = sn.back() + ( as.back() + as.at(sn_size-2) )/2;
-        sn.push_back( next_sn );
+//        print( ex_r, "exact r" );
         sn.pop_front();
     } // pointNb = 0
 //    printData( rs, vs, as );
 
-    std::vector< std::vector< Vector > > positionsVector;
-    std::vector< std::vector< Vector > > accVector;
-    positionsVector.push_back( rs );
-    accVector.push_back( as );
-    std::cout << "rs.size = " << rs.size();
-    std::cout << "positionsVector.size() = " << positionsVector.size() << std::endl;
-    std::cout << "positionsVector.at(0).size() = " << positionsVector.at(0).size() << std::endl;
-    std::cout << "positionsVector.at(0).at(0).size() = " << positionsVector.at(0).at(0).size() << std::endl;
-    saveVectorToFile( positionsVector, "positionsVector" );
-    saveVectorToFile( accVector, "accVector" );
-/*    for( int ti = h; ti<T; ti += h )
-    {
-        std::vector< Vector > solved_ode = OdeNystrom( r0, v0, h );
-        r0 = solved_ode.at(0);
-        v0 = solved_ode.at(1);
-       // a0 = solved_ode.at(2);
-        rs.push_back( r0 );
-        vs.push_back( v0 );
-        //as.push_back( Acceleration( r0 ) );
-    }
+    std::cout << "h=" << h << std::endl;
 
-    std::cout << "obliczono " << rs.size() << " pozycji " << std::endl;
-    std::vector< std::vector< Vector > > positions;
-    positions.push_back( rs );
-    saveVectorToFile( positions, "positions");*/
+    saveVectorToFile( rs, "rs", h );
+//    saveVectorToFile( uncorrected_vs, "uncorrected_vs" );
+//    saveVectorToFile( uncorrected_rs, "uncorrected_rs" );
+    saveVectorToFile( vs, "vs" );
+    saveVectorToFile( as, "as" );
 }
-
-    /*
-void SimulationFromZeroNystrom()
-{
-    double ra = kRE+20394; // apogee [km]
-    double rp = kRE+19970; // perigee [km]
-    double sa = (rp+ra)/2;  // semi-major axis
-    double T = 2*M_PI*sqrt( pow(sa,3)/kmuE ); // period ~12h
-
-    double Vp = sqrt( kmuE*(2/rp-1/sa)); // speed at perigee
-    Vector r0 = { rp, 0, 0 };
-    Vector v0 = { 0, Vp*sqrt(2)/2, Vp*sqrt(2)/2 };
-
-    // vectors of positions, velocities
-    std::vector< Vector > rs;
-    std::vector< Vector > vs;
-
-    rs.push_back( r0 );
-    vs.push_back( v0 );
-
-    double h = 60; // step size in seconds
-    for( int ti = h; ti<T; ti += h )
-    {
-        std::vector< Vector > solved_ode = OdeNystrom( r0, v0, h );
-        r0 = solved_ode.at(0);
-        v0 = solved_ode.at(1);
-       // a0 = solved_ode.at(2);
-        rs.push_back( r0 );
-        vs.push_back( v0 );
-        //as.push_back( Acceleration( r0 ) );
-    }
-
-    std::cout << "obliczono " << rs.size() << " pozycji " << std::endl;
-    std::vector< std::vector< Vector > > positions;
-    positions.push_back( rs );
-    saveVectorToFile( positions, "positionsNystrom");
-
-}
-
-// r - position
-// v - velocity 
-// a - acceleration
-void SimulationNGA() // nie dziala
-{
-    // vectors of positions, velocities, accelerations
-    std::vector< Vector > rs;
-    std::vector< Vector > vs;
-    std::vector< Vector > as;
-
-    double ra = kRE+20394; // apogee [km]
-    double rp = kRE+19970; // perigee [km]
-    double sa = (rp+ra)/2;  // semi-major axis
-    double T = 2*M_PI*sqrt( pow(sa,3)/kmuE ); // period ~12h
-//    double Vp = sqrt( muE*(2/rp-1/sa)); // speed at perigee
-
-    Time t( 2013, 12, 10, 0, 0, 0 );
-    Vector r0_TRS = { -15210.576086, 2042.480101, 21649.168938 };
-    Vector r0 = convert( t, r0_TRS );
-    Vector v0_TRS = { -7773.910720, -26449.272652, -2851.405296 };
-    Vector v0 = 0.001*v0_TRS ;
-    //Vector v0 = convert( t, v0_TRS );
-
-    double r = norm(r0);
-    std::cout << "Vp = " << sqrt( kmuE*(2/r-1/sa) ) << std::endl;
-    std::cout << "v0 = " << v0.at(0) << " " << v0.at(1) << " " << v0.at(2) << std::endl;
-    rs.push_back( r0 );
-    vs.push_back( v0 );
-    as.push_back( Acceleration( r0 ) );
-
-    double h = 60; // step size: 5 minutes
-    for( int ti = h; ti<T; ti += h )
-    {
-        std::vector< Vector > solved_ode = OdeNystrom( r0, v0, h );
-        r0 = solved_ode.at(0);
-        v0 = solved_ode.at(1);
-       // a0 = solved_ode.at(2);
-        rs.push_back( r0 );
-        vs.push_back( v0 );
-        //as.push_back( Acceleration( r0 ) );
-    }
-
-    std::cout << "obliczono " << rs.size() << " pozycji " << std::endl;
-    std::vector< std::vector< Vector > > positions;
-    positions.push_back( rs );
-    saveVectorToFile( positions, "positionsNystrom");
-}
-
-void SimulationSin()
-{
-    std::vector< Vector > rs;
-    std::vector< Vector > vs;
-  
-    Vector r0 = { 0 };
-    Vector v0 = { 1 };
-    rs.push_back( r0 );
-    vs.push_back( v0 );
-    double h = 0.02;
-    for( int i=0; i<300; ++i )
-    {
-        std::vector< Vector > solved_ode = OdeNystrom( r0, v0, h );
-        r0 = solved_ode.at(0);
-        v0 = solved_ode.at(1);
-       // a0 = solved_ode.at(2);
-        rs.push_back( r0 );
-        vs.push_back( v0 );
-        //as.push_back( Acceleration( r0 ) );
-    }
-    std::cout << "wektor pozycji dla sinusa (h=0.1): ";
-    for( int i=0; i<rs.size(); ++i )
-    {
-        std::cout << rs.at(i).at(0) << " (" << sin(i*h) << "), ";
-    }
-    std::cout << std::endl;
-}*/
-/*
-int main()
-{
-    SimulationFromZeroGaussJackson();
-//    SimulationFromZeroNystrom();
-//    SimulationNGA();  // nie dziala - V0 nie jest znane
-//    SimulationSin();
-    return 0;
-}*/

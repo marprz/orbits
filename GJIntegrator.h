@@ -15,8 +15,10 @@ typedef std::vector< std::vector< Vector > > InitialVectors;
 
 class GJIntegrator : public Integrator {
   public:
-    GJIntegrator();
-    Vector Acceleration( const Vector& position );
+//    GJIntegrator();
+    GJIntegrator( Vector (*p_Acceleration)(Vector), std::vector< Vector > (*p_Taylor)( int, double, std::vector< Vector > ), std::vector< Vector > (*p_TaylorV)( int, double, std::vector< Vector >) );
+    GJIntegrator( const Vector& r0, const Vector& v0, Vector (*p_Acceleration)(Vector), std::vector< Vector > (*p_Taylor)( int, double, std::vector< Vector > ), std::vector< Vector > (*p_TaylorV)(int, double, std::vector< Vector >) );
+//    Vector Acceleration( const Vector& position );
     InitialVectors InitializeVectorsGJ( int nb, double h );
     Vector Calcs0( const Vector& v0, const double& h );
     Vector CalcS0( const Vector& r0, const double& h );
@@ -30,23 +32,27 @@ class GJIntegrator : public Integrator {
     Vector Calca5();
     void printData( std::string name1 = "positions", std::string name2 = "velocities", std::string name3 = "accelerations" );
     bool IsAccelerationConverged(); // TODO temporary !!!!!!!!
-    void Startup( const double& h, std::vector< Vector >& corrected_rs, std::vector< Vector >& corrected_vs, std::vector< Vector >& updated_as, Vector r0, Vector v0 );
+    void Startup( const double& h, std::vector< Vector >& corrected_rs, std::vector< Vector >& corrected_vs, std::vector< Vector >& updated_as );
     Vector PredictR( const double& h );
     Vector PredictV( const double& h );
+    Vector MidCorrectR( const int& i, const double& h );
     Vector CorrectR( const double& h );
     Vector CorrectV( const double& h );
     void InitializeGaussJacksonCoefficients();
     void Algorithm( int points, double h );
 
-    std::vector< Vector >rs;
-    std::vector< Vector >vs;
-    std::vector< Vector >as;
+    Vector (*Acceleration)(Vector);
+    std::vector< Vector > (*Taylor)( int, double, std::vector< Vector > );
+    std::vector< Vector > (*TaylorV)( int, double, std::vector< Vector > );
+
     MatrixD a, b;
     std::deque< Vector > sn, Sn; 
     double ra; // apogee [km]
     double rp; // perigee [km]
     double sa; // semi-major axis
     double T; // period ~12h
+    bool isInitKnown;
+    int current_n = 4;
 };
 
 void GJIntegrator::InitializeGaussJacksonCoefficients()
