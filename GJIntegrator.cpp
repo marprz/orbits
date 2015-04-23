@@ -213,7 +213,6 @@ Vector GJIntegrator::Calca5()
     {
         ret = ret + a.at(9).at(9-i-1)*as.at(as_size-i-1) ;
     }
-    print( as.back(), "Prediction - last as" );
     return ret;
 }
 
@@ -282,13 +281,14 @@ void GJIntegrator::Startup( const double& h, std::vector< Vector >& corrected_rs
         }
         else 
         {
-            print( vs.at(i), "old velocity ");
+            Vector suma = { 0, 0, 0 };
+            for( int j=0; j<9; ++j )
+            {
+                suma = suma + (a.at(i)).at(j)*as.at(j);
+            }
             corrected_vs.push_back( h*(sn.at(i)+sum_bn.at(i)) ); // eq. 74 - mid-corrector
-            print( corrected_vs.at(i), "new velocity ");
-            print( rs.at(i), "old position");
-            corrected_rs.push_back( h*h*(Sn.at(i)+sum_an.at(i)) ); // eq. 87 - mid-corrector
-            print( rs.at(i), "new position");
-            std::cout << std::endl;
+            corrected_rs.push_back( h*h*(Sn.at(i)+ suma ) ); // eq. 87 - mid-corrector
+            //corrected_rs.push_back( h*h*(Sn.at(i)+sum_an.at(i)) ); // eq. 87 - mid-corrector
         }
         updated_as.push_back( Acceleration( corrected_rs.back() ) );
     }
@@ -333,13 +333,13 @@ Vector GJIntegrator::MidCorrectR( const int& i, const double& h )
 Vector GJIntegrator::CorrectR( const double& h )
 {
     Vector corr_rn;
-    int index = as.size()-5;
+    int as_size = as.size();
     Vector sum_a4 = { 0, 0, 0 };
     for( int k=0; k<9; ++k )
     //for( int k=0; k<8; ++k )
     {
         // step 10 b.
-        sum_a4 = sum_a4 + a.at(8).at(k)*as.at(index-4+k);
+        sum_a4 = sum_a4 + (a.at(8)).at(k)*as.at(as_size-9+k);
     }
     corr_rn = h*h*(Sn.back() + sum_a4);
     

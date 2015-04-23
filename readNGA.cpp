@@ -16,6 +16,13 @@ int main( int argc, char* argv[] )
     std::cout << "file: " << out_file_name << std::endl;
     std::vector< std::vector< Vector > > transformed_positions;
     transformed_positions.resize( 32 );
+/*
+    std::ofstream outfile;
+    std::string outfileName( "testowy_out", std::ios::out );
+    outfile.open( outfileName.c_str() );
+    outfile << "test out ";
+    outfile.close();
+*/
 
     std::fstream file;
     std::string fileName( "NGA17702" );

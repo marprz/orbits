@@ -22,6 +22,7 @@ double kJ2 = 0.00108263;
 
 void saveVectorToFile( const std::vector< std::vector< Vector > >& positions, const std::string& outName, const int& rows = 0 )
 {
+    std::cout << "Writing to file " << outName << "..." << std::endl;
     int satellites_nb = positions.size();
     int positions_nb;
     if( rows != 0 )
@@ -29,8 +30,8 @@ void saveVectorToFile( const std::vector< std::vector< Vector > >& positions, co
     else 
         positions_nb = positions.at(0).size();
     std::cout << "satellites_nb = " << satellites_nb << ", positions_nb = " << positions_nb << std::endl;
-    std::fstream outFile;
-    outFile.open( outName.c_str(), std::ios::out | std::ios::in );
+    std::ofstream outFile;
+    outFile.open( outName.c_str(), std::ios::out );
     outFile << "function p = " << outName << "\n";
     outFile << "p=zeros(" << satellites_nb << ", " << positions_nb << ", 3 );\n";
     for( int i=0; i<satellites_nb; ++i )
