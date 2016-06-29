@@ -95,6 +95,25 @@ void GJTest()
     gj_integrator.Algorithm( points, h );
 }
 
+/*
+void GJTest2()
+{
+    std::vector< Vector > r = { { 16979.6 -20088.9 4226.2 }, 
+                              { 17575.8 -19751.5 3291.38 },
+                              { 18138.7 -19376.7 2350.3 },
+                              { 18667.1 -18965.1 1404.73 },
+                              { 19160 -18517.6 456.479 },
+                              { 19616.6 -18034.9 -492.658 },
+                              { 20035.9 -17518.2 -1440.88 },
+                              { 20417.3 -16968.3 -2386.39 },
+                              { 20759.9 -16386.2 -3327.4 } };
+    std::vector< Vector > v = 
+    GJIntegrator gj_integrator( 
+    double h = 300;
+    int points = 288;
+    gj_integrator.Algorithm( points, h, false );
+}*/
+
 Vector p_AccSin( Vector pos )
 {
     Vector ret;
@@ -155,6 +174,7 @@ void GJTestSin()
 
 int main()
 {
+//    GJTest2(); 
     GJTest();
 //    GJTestSin();
     std::cout << "TEST GAUSS JACKSON INTEGRATOR" << std::endl;

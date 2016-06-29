@@ -18,6 +18,7 @@ class GJIntegrator : public Integrator {
 //    GJIntegrator();
     GJIntegrator( Vector (*p_Acceleration)(Vector), std::vector< Vector > (*p_Taylor)( int, double, std::vector< Vector > ), std::vector< Vector > (*p_TaylorV)( int, double, std::vector< Vector >) );
     GJIntegrator( const Vector& r0, const Vector& v0, Vector (*p_Acceleration)(Vector), std::vector< Vector > (*p_Taylor)( int, double, std::vector< Vector > ), std::vector< Vector > (*p_TaylorV)(int, double, std::vector< Vector >) );
+    GJIntegrator( const std::vector< Vector >& r0, const std::vector< Vector >& v0, Vector (*p_Acceleration)(Vector) );
 //    Vector Acceleration( const Vector& position );
     InitialVectors InitializeVectorsGJ( int nb, double h );
     Vector Calcs0( const Vector& v0, const double& h );
@@ -39,7 +40,7 @@ class GJIntegrator : public Integrator {
     Vector CorrectR( const double& h );
     Vector CorrectV( const double& h );
     void InitializeGaussJacksonCoefficients();
-    void Algorithm( int points, double h );
+    void Algorithm( int points, double h, bool knownV0only );
 
     Vector (*Acceleration)(Vector);
     std::vector< Vector > (*Taylor)( int, double, std::vector< Vector > );

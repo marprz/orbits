@@ -1,0 +1,30 @@
+
+s0: -0.0002794  0.0091372  0.0091372 
+function CalcSn: index = -1
+function CalcSn: index = 1
+s.size() = 9, a.size() = 9
+new Sn calculated
+
+new calculated last Sn :    0.29569  0.0091199  0.0091199 
+function CalcSn: index = -2
+function CalcSn: index = 2
+s.size() = 9, a.size() = 9
+new Sn calculated
+
+new calculated last Sn :    0.29401   0.018206   0.018205 
+function CalcSn: index = -3
+function CalcSn: index = 3
+s.size() = 9, a.size() = 9
+new Sn calculated
+
+new calculated last Sn :    0.29178    0.02724    0.02724 
+function CalcSn: index = -4
+function CalcSn: index = 4
+s.size() = 9, a.size() = 9
+new Sn calculated
+
+new calculated last Sn :    0.28901   0.036205   0.036205 
+
+predicted r:      25756     4064.7     4064.7 
+
+corrected r:      25756     4064.7     4064.7 

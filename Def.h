@@ -19,6 +19,7 @@ double kmuE = 398600.4418;
 double kRE = 6738;
 double kRE2 = kRE*kRE;
 double kJ2 = 0.00108263;
+double kc = 299792.458; // speed of light [km/s]
 
 void saveVectorToFile( const std::vector< std::vector< Vector > >& positions, const std::string& outName, const int& rows = 0 )
 {
@@ -58,14 +59,18 @@ void saveVectorToFile( const std::vector< std::vector< Vector > >& positions, co
 
 void saveVectorToFile( const std::vector< Vector >& positions, const std::string& outName, const double& h=0, const int& rows = 0 )
 {
-    std::cout << "saveVectorToFile: h=" << h << std::endl;
+    std::cout << "saveVectorToFile: h=" << h << ", " << outName << std::endl;
+    std::string fileName( "outputs/");
+    fileName += outName;
+    fileName += ".m";
+    std::cout << "positions.size() = " << positions.size() << std::endl;
     int positions_nb;
     if( rows != 0 )
         positions_nb = rows;
     else 
         positions_nb = positions.size();
     std::fstream outFile;
-    outFile.open( outName.c_str(), std::ios::out | std::ios::in );
+    outFile.open( fileName.c_str(), std::ios::out );
     outFile << "function p = " << outName << "\n";
     int col = 3;
     if( h != 0 )
@@ -137,6 +142,12 @@ double norm( const Vector& v )
     return ret;
 }
 
+double VelocityMagnitude( const Vector& v )
+{
+    double mag = norm( v );
+    double ra = kRE+20394; // apogee [km]
+    return sqrt( kmuE*( 2/mag - 1/ra ) );
+}
 
 void print( Vector V, std::string name = "Vector" )
 {

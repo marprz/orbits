@@ -13,6 +13,23 @@ GJIntegrator::GJIntegrator( Vector (*p_Acceleration)(Vector), std::vector< Vecto
     isInitKnown = false;
 }
 
+GJIntegrator::GJIntegrator( const std::vector< Vector >& r0, const std::vector< Vector >& v0, Vector (*p_Acceleration)(Vector) )
+{
+    ra = kRE+20394; // apogee [km]
+    rp = kRE+19970; // perigee [km]
+    sa = (rp+ra)/2;  // semi-major axis
+    T = 2*M_PI*sqrt( pow(sa,3)/kmuE ); // period ~12h
+    Acceleration = p_Acceleration;
+    isInitKnown = true;
+
+    for( int i=0; i<r0.size(); ++i )
+    {
+        rs.push_back( r0[i] );
+        as.push_back( Acceleration( r0[i] ) );
+        vs.push_back( v0[i] );
+    }
+}
+
 GJIntegrator::GJIntegrator( const Vector& r0, const Vector& v0, Vector (*p_Acceleration)(Vector), std::vector< Vector > (*p_Taylor)( int, double, std::vector< Vector > ), std::vector< Vector > (*p_TaylorV)(int, double, std::vector< Vector >) )
 {
     ra = kRE+20394; // apogee [km]
@@ -367,7 +384,7 @@ Vector GJIntegrator::CorrectV( const double& h )
     return corr_vn;
 }
 
-void GJIntegrator::Algorithm( int points, double h )
+void GJIntegrator::Algorithm( int points, double h, bool knownV0only = true )
 {
     points = T/h+1;
     std::cout << "points: " << points << std::endl;
@@ -376,11 +393,14 @@ void GJIntegrator::Algorithm( int points, double h )
     int pointNb1 = points; 
     int pointNb2 = pointNb1;;
     std::cout << "InitializeVectorsGJ: " << std::endl;
-    InitialVectors init = InitializeVectorsGJ( n, h );
-    std::cout << "InitializeVectorsGJ - done " << std::endl;
-    rs = init.at(0);
-    vs = init.at(1);
-    as = init.at(2);
+    InitialVectors init;
+    if( knownV0only )
+    {
+        init = InitializeVectorsGJ( n, h );
+        rs = init.at(0);
+        vs = init.at(1);
+        as = init.at(2);
+    }
 
     InitializeGaussJacksonCoefficients();
 
@@ -388,7 +408,7 @@ void GJIntegrator::Algorithm( int points, double h )
     int counter = 1; 
     int tempCounter = 0; 
     
-    while( !is_acceleration_converged )
+    while( !is_acceleration_converged && knownV0only )
     {
         std::vector< Vector > sum_bn, sum_an;
         std::cout << std::setprecision( 5 );

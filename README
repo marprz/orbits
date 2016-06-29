@@ -1,0 +1,6 @@
+Conversion.cpp: - converts from ECEF to ECI
+    Vector convert( Time t, Vector v) - requires polar parameters from file
+    "polar"
+
+=================================================================================
+

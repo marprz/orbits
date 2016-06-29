@@ -1,0 +1,1 @@
+/usr/bin/c++    -std=c++11    CMakeFiles/TestsMatrix.dir/testMatrices.cpp.o  -o TestsMatrix -rdynamic -lgtest_main -lgtest -lpthread 

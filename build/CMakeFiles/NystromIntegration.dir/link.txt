@@ -1,0 +1,1 @@
+/usr/bin/c++    -std=c++11    CMakeFiles/NystromIntegration.dir/TestNystromIntegrators.cpp.o  -o NystromIntegration -rdynamic 

@@ -1,0 +1,46 @@
+#IncludeRegexLine: ^[ 	]*#[ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/marta/Dropbox/msc/cpp/OrbitDetermination/Def.h
+list
+-
+deque
+-
+array
+-
+vector
+-
+cmath
+-
+iomanip
+-
+iostream
+-
+fstream
+-
+
+/home/marta/Dropbox/msc/cpp/OrbitDetermination/Taylor.cpp
+iostream
+-
+vector
+-
+cmath
+-
+Def.h
+/home/marta/Dropbox/msc/cpp/OrbitDetermination/Def.h
+
+/home/marta/Dropbox/msc/cpp/OrbitDetermination/testTaylor.cpp
+algorithm
+-
+numeric
+-
+gtest/gtest.h
+/home/marta/Dropbox/msc/cpp/OrbitDetermination/gtest/gtest.h
+Taylor.cpp
+/home/marta/Dropbox/msc/cpp/OrbitDetermination/Taylor.cpp
+
